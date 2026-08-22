@@ -57,7 +57,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
         </button>
 
         <div className="block lg:hidden">
-          <Link href="/" className="flex items-center">
+          <Link href="/dashboard" className="flex items-center">
             <Logo variant="full" size="sm" />
           </Link>
         </div>

@@ -14,7 +14,7 @@ export const Sidebar: React.FC = () => {
   const navItems = [
     {
       name: "Dashboard",
-      href: "/",
+      href: "/dashboard",
       icon: "dashboard",
       visible: true,
     },
@@ -48,7 +48,7 @@ export const Sidebar: React.FC = () => {
     <aside className="hidden lg:flex flex-col h-screen w-64 fixed left-0 top-0 bg-surface-container-low border-r border-border-light p-space-md gap-space-sm z-50">
       {/* Brand Header */}
       <div className="flex items-center mb-space-xl p-space-sm">
-        <Link href="/" className="flex items-center">
+        <Link href="/dashboard" className="flex items-center">
           <Logo variant="full" size="md" />
         </Link>
       </div>
