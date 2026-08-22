@@ -8,6 +8,7 @@ import { useCheckInStatus } from "@/hooks/useDashboardStats";
 
 import { Logo } from "@/components/Logo";
 import { SystrayCheckInOut } from "@/components/attendance/SystrayCheckInOut";
+import { supabase } from "@/lib/supabase/client";
 
 interface HeaderProps {
   onToggleMobileMenu?: () => void;
@@ -30,6 +31,19 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
   const toggleRole = () => {
     setRole(currentRole === "admin" ? "employee" : "admin");
     setShowProfileMenu(false);
+  };
+
+  const handleLogout = async () => {
+    setShowProfileMenu(false);
+    try {
+      await supabase.auth.signOut().catch(() => null);
+    } catch {
+      // ignore
+    }
+    document.cookie = "dayflow_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
+    document.cookie = "dayflow_demo_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
+    localStorage.removeItem("dayflow_authenticated");
+    window.location.href = "/signin";
   };
 
   const navItems = [
@@ -208,14 +222,14 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
                   <span className="material-symbols-outlined text-secondary text-lg">person</span>
                   My Profile
                 </Link>
-                <Link
-                  href="/signin"
-                  onClick={() => setShowProfileMenu(false)}
-                  className="w-full text-left px-space-md py-3 text-body-md text-danger-text hover:bg-danger-soft transition-colors flex items-center gap-2"
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="w-full text-left px-space-md py-3 text-body-md text-danger-text hover:bg-danger-soft transition-colors flex items-center gap-2 cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-lg">logout</span>
                   Log Out
-                </Link>
+                </button>
               </div>
             </div>
           )}

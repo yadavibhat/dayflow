@@ -68,13 +68,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(signInUrl);
   }
 
-  // Redirect already-authenticated users away from sign-in
-  if ((user || hasSessionCookie) && (pathname === "/signin" || pathname === "/signup")) {
-    const employeesUrl = request.nextUrl.clone();
-    employeesUrl.pathname = "/employees";
-    return NextResponse.redirect(employeesUrl);
-  }
-
   return response;
 }
 
