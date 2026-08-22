@@ -98,9 +98,42 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    // Client-side role-based schema validation
-    const schema = role === "employee" ? EmployeeSelfEditSchema : EmployeeSchema;
-    const validated = schema.safeParse(formData);
+    // Build a role-scoped payload — only include fields the role is allowed to edit.
+    // This is a client-side guard; the server action re-validates independently.
+    let payload: Record<string, unknown>;
+
+    if (isEmployee) {
+      // Employee role: phone, address, personal email only
+      payload = {
+        phone: formData.phone,
+        address: formData.address,
+        email: formData.email,
+      };
+    } else {
+      // HR/Admin role: personal fields + job fields (no salary, no employeeCode)
+      payload = {
+        name: formData.name,
+        phone: formData.phone,
+        address: formData.address,
+        dob: formData.dob,
+        nationality: formData.nationality,
+        maritalStatus: formData.maritalStatus,
+        email: formData.email,
+        bankName: formData.bankName,
+        accountNo: formData.accountNo,
+        routingNo: formData.routingNo,
+        panTaxId: formData.panTaxId,
+        uan: formData.uan,
+        department: formData.department,
+        role: formData.role,
+        managerId: formData.managerId,
+        doj: formData.doj,
+      };
+    }
+
+    // Client-side Zod validation using the same schema the server will use
+    const schema = isEmployee ? EmployeeSelfEditSchema : EmployeeSchema;
+    const validated = schema.safeParse(payload);
 
     if (!validated.success) {
       const errors: Record<string, string> = {};
@@ -113,7 +146,7 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
     }
 
     setSaving(true);
-    const result = await updateEmployeeProfile(employee.id, formData);
+    const result = await updateEmployeeProfile(employee.id, payload as Partial<Employee>);
     setSaving(false);
 
     if (result.success) {
