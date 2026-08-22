@@ -13,16 +13,16 @@ import {
   isSameMonth,
   addMonths,
   subMonths,
-  startOfWeek,
   endOfWeek,
   eachWeekOfInterval,
-  isSameDay,
-  isAfter,
-  startOfDay,
 } from "date-fns";
+import {
+  deriveDailyAttendanceStatus,
+  calculateEmployeeAttendanceSummary,
+} from "@/services/attendanceService";
 
 export default function AttendancePage() {
-  const { attendance, currentUser, employees, leaves, currentRole } = useApp();
+  const { attendance, currentUser, leaves, currentRole } = useApp();
   const [viewType, setViewType] = useState<"admin" | "employee">(currentRole === "admin" ? "admin" : "employee");
   const [breakdownType, setBreakdownType] = useState<"daily" | "weekly">("daily");
   const [searchQuery, setSearchQuery] = useState("");
@@ -30,7 +30,7 @@ export default function AttendancePage() {
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
   const [selectedAdminDate, setSelectedAdminDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
 
-  // Navigation handlers
+  // Month navigation handlers
   const handlePrevMonth = () => setSelectedMonth((prev) => subMonths(prev, 1));
   const handleNextMonth = () => setSelectedMonth((prev) => addMonths(prev, 1));
   const handleResetMonth = () => setSelectedMonth(new Date());
@@ -44,132 +44,7 @@ export default function AttendancePage() {
     return leaves.filter((l) => l.employeeId === currentUser.id && l.status === "Approved");
   }, [leaves, currentUser.id]);
 
-  // 2. REUSABLE DETERMINISTIC STATUS DERIVATION
-  const getDerivedDayStatus = (
-    dayDate: Date,
-    record?: (typeof attendance)[0] | null,
-    userLeaves: typeof leaves = myApprovedLeaves
-  ): {
-    status: "Present" | "Late" | "Half-day" | "Leave" | "Absent" | "Weekend";
-    badgeClass: string;
-    checkIn: string;
-    checkOut: string;
-    workHours: string;
-    extraHours: string;
-  } => {
-    const dayStr = format(dayDate, "yyyy-MM-dd");
-    const today = startOfDay(new Date());
-    const isPastOrToday = !isAfter(startOfDay(dayDate), today);
-    const isWeekendDay = isWeekend(dayDate);
-
-    // Rule 1: Check if date falls in an approved leave range (Leave overrides attendance)
-    const onLeave = userLeaves.some((l) => {
-      if (l.dates.includes(dayStr)) return true;
-      if (l.dates.includes("-")) {
-        const parts = l.dates.split("-").map((p) => p.trim());
-        if (parts.length === 2) {
-          try {
-            const start = startOfDay(parseISO(parts[0]));
-            const end = startOfDay(parseISO(parts[1]));
-            const target = startOfDay(dayDate);
-            return target >= start && target <= end;
-          } catch {
-            return false;
-          }
-        }
-      }
-      return false;
-    });
-
-    if (onLeave) {
-      return {
-        status: "Leave",
-        badgeClass: "bg-blue-50 text-blue-700 border border-blue-200",
-        checkIn: "--:--",
-        checkOut: "--:--",
-        workHours: "--",
-        extraHours: "-",
-      };
-    }
-
-    if (isWeekendDay) {
-      return {
-        status: "Weekend",
-        badgeClass: "bg-slate-100 text-slate-500 border border-slate-200",
-        checkIn: "--:--",
-        checkOut: "--:--",
-        workHours: "--",
-        extraHours: "-",
-      };
-    }
-
-    // Rule 2: Check if real attendance record exists
-    if (record && record.checkIn && record.checkIn !== "--:--") {
-      // Check half-day threshold (< 4.5 hours worked)
-      if (record.workHours && record.workHours !== "--") {
-        const match = record.workHours.match(/(\d+)h\s*(\d*)m?/);
-        if (match) {
-          const h = parseInt(match[1] || "0");
-          const m = parseInt(match[2] || "0");
-          const totalHours = h + m / 60;
-          if (totalHours > 0 && totalHours < 4.5) {
-            return {
-              status: "Half-day",
-              badgeClass: "bg-purple-50 text-purple-700 border border-purple-200",
-              checkIn: record.checkIn,
-              checkOut: record.checkOut,
-              workHours: record.workHours,
-              extraHours: record.extraHours,
-            };
-          }
-        }
-      }
-
-      if (record.status === "Late") {
-        return {
-          status: "Late",
-          badgeClass: "bg-amber-50 text-amber-700 border border-amber-200",
-          checkIn: record.checkIn,
-          checkOut: record.checkOut,
-          workHours: record.workHours,
-          extraHours: record.extraHours,
-        };
-      }
-
-      return {
-        status: "Present",
-        badgeClass: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-        checkIn: record.checkIn,
-        checkOut: record.checkOut,
-        workHours: record.workHours,
-        extraHours: record.extraHours,
-      };
-    }
-
-    // Rule 3: Working day in past/today with no check-in and no leave = Absent
-    if (isPastOrToday) {
-      return {
-        status: "Absent",
-        badgeClass: "bg-rose-50 text-rose-700 border border-rose-200",
-        checkIn: "--:--",
-        checkOut: "--:--",
-        workHours: "--",
-        extraHours: "-",
-      };
-    }
-
-    // Future working day
-    return {
-      status: "Weekend",
-      badgeClass: "bg-slate-50 text-slate-400 border border-slate-100",
-      checkIn: "--:--",
-      checkOut: "--:--",
-      workHours: "--",
-      extraHours: "-",
-    };
-  };
-
-  // 3. DAILY BREAKDOWN CALCULATION FOR SELECTED MONTH
+  // 2. DAILY BREAKDOWN CALCULATION FOR SELECTED MONTH
   const monthDays = useMemo(() => {
     const start = startOfMonth(selectedMonth);
     const end = endOfMonth(selectedMonth);
@@ -180,7 +55,7 @@ export default function AttendancePage() {
     return monthDays.map((dayDate) => {
       const dateStr = format(dayDate, "yyyy-MM-dd");
       const record = myRawAttendance.find((a) => a.date === dateStr);
-      const derived = getDerivedDayStatus(dayDate, record, myApprovedLeaves);
+      const derived = deriveDailyAttendanceStatus(dayDate, record, myApprovedLeaves);
 
       return {
         date: dateStr,
@@ -189,62 +64,15 @@ export default function AttendancePage() {
         isWeekend: isWeekend(dayDate),
         ...derived,
       };
-    }).reverse(); // Most recent first
+    }).reverse();
   }, [monthDays, myRawAttendance, myApprovedLeaves]);
 
-  // 4. SUMMARY METRICS COMPUTED FROM REAL DERIVED STATUSES
+  // 3. SUMMARY METRICS COMPUTED FROM REAL DERIVED STATUSES
   const summary = useMemo(() => {
-    let daysPresent = 0;
-    let daysLate = 0;
-    let daysHalfDay = 0;
-    let daysAbsent = 0;
-    let daysLeave = 0;
-    let totalWorkingDays = 0;
-    let totalWorkedMinutes = 0;
+    return calculateEmployeeAttendanceSummary(selectedMonth, myRawAttendance, myApprovedLeaves);
+  }, [selectedMonth, myRawAttendance, myApprovedLeaves]);
 
-    monthDays.forEach((dayDate) => {
-      const dateStr = format(dayDate, "yyyy-MM-dd");
-      const record = myRawAttendance.find((a) => a.date === dateStr);
-      const derived = getDerivedDayStatus(dayDate, record, myApprovedLeaves);
-
-      if (!isWeekend(dayDate)) {
-        totalWorkingDays++;
-      }
-
-      if (derived.status === "Present") daysPresent++;
-      else if (derived.status === "Late") {
-        daysPresent++;
-        daysLate++;
-      } else if (derived.status === "Half-day") {
-        daysHalfDay++;
-      } else if (derived.status === "Leave") {
-        daysLeave++;
-      } else if (derived.status === "Absent") {
-        daysAbsent++;
-      }
-
-      if (derived.workHours && derived.workHours !== "--") {
-        const match = derived.workHours.match(/(\d+)h\s*(\d*)m?/);
-        if (match) {
-          totalWorkedMinutes += parseInt(match[1] || "0") * 60 + parseInt(match[2] || "0");
-        }
-      }
-    });
-
-    const totalHours = `${Math.floor(totalWorkedMinutes / 60)}h ${totalWorkedMinutes % 60}m`;
-
-    return {
-      daysPresent,
-      daysLate,
-      daysHalfDay,
-      daysAbsent,
-      daysLeave,
-      totalWorkingDays,
-      totalHours,
-    };
-  }, [monthDays, myRawAttendance, myApprovedLeaves]);
-
-  // 5. WEEKLY BREAKDOWN GROUPING
+  // 4. WEEKLY BREAKDOWN GROUPING
   const weeklyHistory = useMemo(() => {
     const monthStart = startOfMonth(selectedMonth);
     const monthEnd = endOfMonth(selectedMonth);
@@ -262,7 +90,7 @@ export default function AttendancePage() {
       const dayBreakdowns = daysInWeek.map((dayDate) => {
         const dateStr = format(dayDate, "yyyy-MM-dd");
         const record = myRawAttendance.find((a) => a.date === dateStr);
-        const derived = getDerivedDayStatus(dayDate, record, myApprovedLeaves);
+        const derived = deriveDailyAttendanceStatus(dayDate, record, myApprovedLeaves);
 
         if (derived.status === "Present" || derived.status === "Late") presentCount++;
         if (derived.status === "Leave") leaveCount++;
@@ -297,7 +125,7 @@ export default function AttendancePage() {
     }).reverse();
   }, [selectedMonth, myRawAttendance, myApprovedLeaves]);
 
-  // 6. ADMIN OVERVIEW LOGS (All Employees)
+  // 5. ADMIN OVERVIEW LOGS (All Employees)
   const adminFilteredAttendance = useMemo(() => {
     return attendance.filter((item) => {
       const matchesSearch =
@@ -342,10 +170,10 @@ export default function AttendancePage() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-space-md mb-space-lg">
           <div>
             <h1 className="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-primary font-bold tracking-tight">
-              Attendance History &amp; Logs
+              Attendance Management &amp; History
             </h1>
             <p className="font-body-md text-body-md text-secondary mt-1">
-              Deterministic time tracking, daily audits, and verified work hours.
+              Real-time time tracking, daily audits, and verified work hours.
             </p>
           </div>
 
@@ -353,7 +181,7 @@ export default function AttendancePage() {
             <button
               onClick={handleExportCSV}
               className="px-3.5 py-2 bg-surface-container-lowest border border-border-light rounded-lg text-secondary font-label-md text-label-md hover:bg-surface-container-low transition-colors flex items-center gap-2 cursor-pointer shadow-sm"
-              title="Export filtered records to CSV"
+              title="Export records to CSV"
             >
               <span className="material-symbols-outlined text-[18px]">download</span>
               Export CSV
@@ -653,7 +481,7 @@ export default function AttendancePage() {
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="px-3 py-2 bg-surface-container-lowest border border-border-light rounded-lg text-xs font-semibold text-primary focus:outline-none"
+                    className="px-3 py-2 bg-surface-container-lowest border border-border-light rounded-lg text-xs font-semibold text-primary focus:outline-none cursor-pointer"
                   >
                     <option value="All">All Statuses</option>
                     <option value="Present">Present</option>
@@ -670,7 +498,7 @@ export default function AttendancePage() {
                   type="date"
                   value={selectedAdminDate}
                   onChange={(e) => setSelectedAdminDate(e.target.value)}
-                  className="px-3 py-1.5 border border-border-light rounded-lg text-xs font-semibold text-primary bg-surface-container-lowest focus:outline-none"
+                  className="px-3 py-1.5 border border-border-light rounded-lg text-xs font-semibold text-primary bg-surface-container-lowest focus:outline-none cursor-pointer"
                 />
                 {selectedAdminDate && (
                   <button
@@ -748,7 +576,7 @@ export default function AttendancePage() {
                               </span>
                             </div>
                           </td>
-                          <td className="px-6 py-3.5 text-secondary text-xs font-medium">
+                          <td className="px-6 py-3.5 text-secondary text-xs font-medium font-mono">
                             {item.date}
                           </td>
                           <td className="px-6 py-3.5 text-secondary font-mono text-xs">
