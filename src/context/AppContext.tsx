@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
+import { executeCheckIn, executeCheckOut } from "@/services/attendanceService";
 import {
   employeeSchema,
   leaveRequestSchema,
@@ -12,6 +13,7 @@ import {
   LeaveRequest,
   AuditLog,
 } from "@/lib/validations/schemas";
+
 export type {
   Employee,
   SalaryProfile,
@@ -28,13 +30,14 @@ interface AppContextType {
   attendance: AttendanceLog[];
   leaves: LeaveRequest[];
   auditLogs: AuditLog[];
-  checkIn: (employeeId: string) => void;
-  checkOut: (employeeId: string) => void;
-  addEmployee: (employee: Omit<Employee, "id" | "salary"> & { baseSalary: number }) => void;
-  requestLeave: (leave: Omit<LeaveRequest, "id" | "status" | "employeeName" | "department" | "avatar">) => void;
-  updateLeaveStatus: (leaveId: string, status: "Approved" | "Rejected") => void;
-  updateSalaryProfile: (employeeId: string, salary: SalaryProfile) => void;
+  checkIn: (employeeId: string) => Promise<void>;
+  checkOut: (employeeId: string) => Promise<void>;
+  addEmployee: (employee: Omit<Employee, "id" | "salary"> & { baseSalary: number }) => Promise<void>;
+  requestLeave: (leave: Omit<LeaveRequest, "id" | "status" | "employeeName" | "department" | "avatar">) => Promise<void>;
+  updateLeaveStatus: (leaveId: string, status: "Approved" | "Rejected") => Promise<void>;
+  updateSalaryProfile: (employeeId: string, salary: SalaryProfile) => Promise<void>;
   addAuditLog: (action: string, user: string) => void;
+  refreshData: () => Promise<void>;
 }
 
 const initialEmployees: Employee[] = [
@@ -69,9 +72,7 @@ const initialEmployees: Employee[] = [
 ];
 
 const initialAttendance: AttendanceLog[] = [];
-
 const initialLeaves: LeaveRequest[] = [];
-
 const initialAuditLogs: AuditLog[] = [
   {
     id: "log1",
@@ -85,7 +86,7 @@ const initialAuditLogs: AuditLog[] = [
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 // Helper check to identify if actual credentials are setup in environment
-const isSupabaseConfigured = () => {
+export const isSupabaseConfigured = () => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   return (
@@ -93,6 +94,8 @@ const isSupabaseConfigured = () => {
     key !== undefined &&
     url !== "" &&
     key !== "" &&
+    !url.includes("your-placeholder-url") &&
+    !key.includes("your-placeholder-anon-key") &&
     !url.includes("your-project-id") &&
     !key.includes("your-supabase-anon-key")
   );
@@ -107,29 +110,26 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
   const [leaves, setLeaves] = useState<LeaveRequest[]>(initialLeaves);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(initialAuditLogs);
 
+  const fetchSupabaseData = async () => {
+    if (!isSupabaseConfigured()) return;
+    try {
+      const [empRes, attRes, leaveRes] = await Promise.all([
+        supabase.from("employees").select("*"),
+        supabase.from("attendance").select("*"),
+        supabase.from("leaves").select("*"),
+      ]);
+
+      if (empRes.data && empRes.data.length > 0) setEmployees(empRes.data);
+      if (attRes.data) setAttendance(attRes.data);
+      if (leaveRes.data) setLeaves(leaveRes.data);
+    } catch (err) {
+      console.warn("Supabase fetch failed, fallback to local storage state", err);
+    }
+  };
+
   // Load from localStorage or Supabase on mount
   useEffect(() => {
     if (isSupabaseConfigured()) {
-      const fetchSupabaseData = async () => {
-        try {
-          const { data: emps } = await supabase.from("employees").select("*");
-          if (emps && emps.length > 0) setEmployees(emps as Employee[]);
-
-          const { data: atts } = await supabase.from("attendance").select("*");
-          if (atts && atts.length > 0) setAttendance(atts as AttendanceLog[]);
-
-          const { data: lvs } = await supabase.from("leaves").select("*");
-          if (lvs && lvs.length > 0) setLeaves(lvs as LeaveRequest[]);
-
-          const { data: logs } = await supabase
-            .from("audit_logs")
-            .select("*")
-            .order("created_at", { ascending: false });
-          if (logs && logs.length > 0) setAuditLogs(logs as AuditLog[]);
-        } catch (e) {
-          console.error("Supabase fetch error, fallback to localState", e);
-        }
-      };
       fetchSupabaseData();
     } else {
       const localRole = localStorage.getItem("dayflow_role");
@@ -139,23 +139,42 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
       const localLogs = localStorage.getItem("dayflow_logs");
 
       if (localRole) setRole(localRole as "admin" | "employee");
-      if (localEmployees) setEmployees(JSON.parse(localEmployees));
-      if (localAttendance) setAttendance(JSON.parse(localAttendance));
-      if (localLeaves) setLeaves(JSON.parse(localLeaves));
-      if (localLogs) setAuditLogs(JSON.parse(localLogs));
+      if (localEmployees) {
+        try {
+          setEmployees(JSON.parse(localEmployees));
+        } catch {}
+      }
+      if (localAttendance) {
+        try {
+          setAttendance(JSON.parse(localAttendance));
+        } catch {}
+      }
+      if (localLeaves) {
+        try {
+          setLeaves(JSON.parse(localLeaves));
+        } catch {}
+      }
+      if (localLogs) {
+        try {
+          setAuditLogs(JSON.parse(localLogs));
+        } catch {}
+      }
     }
   }, []);
 
+  // Save updates to localStorage
   const saveState = (key: string, value: any) => {
-    localStorage.setItem(key, JSON.stringify(value));
+    if (typeof window !== "undefined") {
+      localStorage.setItem(key, JSON.stringify(value));
+    }
   };
 
   const handleSetRole = (role: "admin" | "employee") => {
     setRole(role);
-    localStorage.setItem("dayflow_role", role);
+    saveState("dayflow_role", role);
   };
 
-  const addAuditLog = async (action: string, user: string) => {
+  const addAuditLog = (action: string, user: string) => {
     const newLog: AuditLog = {
       id: `log${Date.now()}`,
       user,
@@ -163,151 +182,83 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
       timestamp: "Just now",
       ipAddress: "127.0.0.1",
     };
-
-    if (isSupabaseConfigured()) {
-      try {
-        await supabase.from("audit_logs").insert([newLog]);
-      } catch (err) {
-        console.error(err);
-      }
-    }
-
     const updated = [newLog, ...auditLogs];
     setAuditLogs(updated);
     saveState("dayflow_logs", updated);
   };
 
   const checkIn = async (employeeId: string) => {
-    const todayStr = new Date().toISOString().split("T")[0];
-    const isAlreadyCheckedIn = attendance.some(
-      (a) => a.employeeId === employeeId && a.date === todayStr
-    );
-
-    if (isAlreadyCheckedIn) return;
-
     const emp = employees.find((e) => e.id === employeeId);
-    if (!emp) return;
+    if (!emp) throw new Error("Employee not found");
 
-    const now = new Date();
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-    const ampm = hours >= 12 ? "PM" : "AM";
-    const displayHours = hours % 12 || 12;
-    const padMin = String(minutes).padStart(2, "0");
-    const checkInTime = `${String(displayHours).padStart(2, "0")}:${padMin} ${ampm}`;
-
-    const isLate = hours > 9 || (hours === 9 && minutes > 0);
-
-    const newRecord: AttendanceLog = {
-      id: `att${Date.now()}`,
-      employeeId,
-      employeeName: emp.name,
-      checkIn: checkInTime,
-      checkOut: "--:--",
-      workHours: "--",
-      extraHours: "-",
-      status: isLate ? "Late" : "Present",
-      date: todayStr,
-    };
+    const result = await executeCheckIn({ employeeId, workMode: "office" }, emp.name, attendance);
+    if (!result.success || !result.record) {
+      throw new Error(result.error || "Check-in failed");
+    }
 
     if (isSupabaseConfigured()) {
       try {
-        await supabase.from("attendance").insert([newRecord]);
+        await supabase.from("attendance").upsert([result.record]);
         await supabase.from("employees").update({ status: "Active" }).eq("id", employeeId);
       } catch (err) {
-        console.error(err);
+        console.error("Supabase checkIn error:", err);
       }
     }
 
-    const updated = [newRecord, ...attendance];
+    const updated = [result.record, ...attendance.filter((a) => !(a.employeeId === employeeId && a.date === result.record!.date))];
     setAttendance(updated);
     saveState("dayflow_attendance", updated);
 
+    // Update employee status
     const updatedEmployees = employees.map((e) =>
       e.id === employeeId ? { ...e, status: "Active" as const } : e
     );
     setEmployees(updatedEmployees);
     saveState("dayflow_employees", updatedEmployees);
 
-    addAuditLog(`checked in at ${checkInTime}`, emp.name);
+    addAuditLog(`checked in at ${result.record.checkIn}`, emp.name);
   };
 
   const checkOut = async (employeeId: string) => {
-    const todayStr = new Date().toISOString().split("T")[0];
-    const recordIndex = attendance.findIndex(
-      (a) => a.employeeId === employeeId && a.date === todayStr
-    );
-
-    if (recordIndex === -1) return;
-
-    const record = attendance[recordIndex];
-    if (record.checkOut !== "--:--") return;
-
-    const now = new Date();
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-    const ampm = hours >= 12 ? "PM" : "AM";
-    const displayHours = hours % 12 || 12;
-    const padMin = String(minutes).padStart(2, "0");
-    const checkOutTime = `${String(displayHours).padStart(2, "0")}:${padMin} ${ampm}`;
-
-    const checkInParts = record.checkIn.split(" ");
-    const timeParts = checkInParts[0].split(":");
-    let inHrs = parseInt(timeParts[0]);
-    const inMins = parseInt(timeParts[1]);
-    const inAmpm = checkInParts[1];
-
-    if (inAmpm === "PM" && inHrs !== 12) inHrs += 12;
-    if (inAmpm === "AM" && inHrs === 12) inHrs = 0;
-
-    const checkInDate = new Date();
-    checkInDate.setHours(inHrs, inMins, 0);
-
-    const diffMs = now.getTime() - checkInDate.getTime();
-    const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-
-    const totalHoursStr = `${diffHrs}h ${diffMins}m`;
-
-    let extraHoursStr = "-";
-    if (diffMs > 8 * 60 * 60 * 1000) {
-      const extraMs = diffMs - 8 * 60 * 60 * 1000;
-      const exHrs = Math.floor(extraMs / (1000 * 60 * 60));
-      const exMins = Math.floor((extraMs % (1000 * 60 * 60)) / (1000 * 60));
-      extraHoursStr = `${exHrs}h ${exMins}m`;
+    const emp = employees.find((e) => e.id === employeeId);
+    const result = await executeCheckOut({ employeeId, breakMinutes: 0 }, attendance);
+    if (!result.success || !result.record) {
+      throw new Error(result.error || "Check-out failed");
     }
-
-    const updatedRecord: AttendanceLog = {
-      ...record,
-      checkOut: checkOutTime,
-      workHours: totalHoursStr,
-      extraHours: extraHoursStr,
-    };
 
     if (isSupabaseConfigured()) {
       try {
         await supabase
           .from("attendance")
-          .update({ checkOut: checkOutTime, workHours: totalHoursStr, extraHours: extraHoursStr })
-          .eq("id", record.id);
+          .update({
+            checkOut: result.record.checkOut,
+            workHours: result.record.workHours,
+            extraHours: result.record.extraHours,
+          })
+          .eq("id", result.record.id);
         await supabase.from("employees").update({ status: "Away" }).eq("id", employeeId);
       } catch (err) {
-        console.error(err);
+        console.error("Supabase checkOut error:", err);
       }
     }
 
-    const updatedAttendance = [...attendance];
-    updatedAttendance[recordIndex] = updatedRecord;
+    const updatedAttendance = attendance.map((log) =>
+      log.id === result.record!.id ? result.record! : log
+    );
+    if (!updatedAttendance.some((l) => l.id === result.record!.id)) {
+      updatedAttendance.unshift(result.record!);
+    }
     setAttendance(updatedAttendance);
     saveState("dayflow_attendance", updatedAttendance);
 
+    // Update employee status
     const updatedEmployees = employees.map((e) =>
       e.id === employeeId ? { ...e, status: "Away" as const } : e
     );
     setEmployees(updatedEmployees);
     saveState("dayflow_employees", updatedEmployees);
 
-    addAuditLog(`checked out at ${checkOutTime} (${totalHoursStr} worked)`, record.employeeName);
+    addAuditLog(`checked out at ${result.record.checkOut} (${result.record.workHours} worked)`, emp ? emp.name : result.record.employeeName);
   };
 
   const addEmployee = async (employee: Omit<Employee, "id" | "salary"> & { baseSalary: number }) => {
@@ -363,21 +314,19 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
       avatar: emp.avatar,
     };
 
-    // Zod validation contract enforcement
+    // Zod schema enforcement
     const validated = leaveRequestSchema.safeParse(newRequest);
     if (!validated.success) {
       const errorMsg = validated.error.issues.map((e) => `${e.path.join(".")}: ${e.message}`).join(", ");
-      alert(`Schema Validation Failed: ${errorMsg}`);
-      console.error("Zod Schema Validation Failed", validated.error.format());
+      alert(`Leave Request Failed Validation: ${errorMsg}`);
       return;
     }
 
     if (isSupabaseConfigured()) {
       try {
-        const { error } = await supabase.from("leaves").insert([validated.data]);
-        if (error) throw error;
+        await supabase.from("leaves").insert([validated.data]);
       } catch (err) {
-        console.error("Supabase insert failed, falling back to localState", err);
+        console.error(err);
       }
     }
 
@@ -385,11 +334,11 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
     setLeaves(updated);
     saveState("dayflow_leaves", updated);
 
-    addAuditLog(`submitted a request for ${leave.type} (${leave.dates})`, emp.name);
+    addAuditLog(`requested ${leave.type} (${leave.dates})`, emp.name);
   };
 
   const updateLeaveStatus = async (leaveId: string, status: "Approved" | "Rejected") => {
-    const updatedLeaves = leaves.map((l) =>
+    const updated = leaves.map((l) =>
       l.id === leaveId ? { ...l, status } : l
     );
 
@@ -401,104 +350,51 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     }
 
-    setLeaves(updatedLeaves);
-    saveState("dayflow_leaves", updatedLeaves);
+    setLeaves(updated);
+    saveState("dayflow_leaves", updated);
 
     const leave = leaves.find((l) => l.id === leaveId);
     if (leave) {
       addAuditLog(`${status.toLowerCase()} leave request for ${leave.employeeName}`, "HR Admin");
-
-      if (status === "Approved") {
-        const todayStr = new Date().toISOString().split("T")[0];
-        const newRecord: AttendanceLog = {
-          id: `att${Date.now()}`,
-          employeeId: leave.employeeId,
-          employeeName: leave.employeeName,
-          checkIn: "--:--",
-          checkOut: "--:--",
-          workHours: "--",
-          extraHours: "-",
-          status: "On Leave",
-          date: todayStr,
-        };
-
-        if (isSupabaseConfigured()) {
-          try {
-            await supabase.from("attendance").insert([newRecord]);
-            await supabase.from("employees").update({ status: "On Leave" }).eq("id", leave.employeeId);
-          } catch (err) {
-            console.error(err);
-          }
-        }
-
-        const updatedAttendance = [newRecord, ...attendance];
-        setAttendance(updatedAttendance);
-        saveState("dayflow_attendance", updatedAttendance);
-
-        const updatedEmployees = employees.map((e) =>
-          e.id === leave.employeeId ? { ...e, status: "On Leave" as const } : e
-        );
-        setEmployees(updatedEmployees);
-        saveState("dayflow_employees", updatedEmployees);
-      }
     }
   };
 
   const updateSalaryProfile = async (employeeId: string, salary: SalaryProfile) => {
-    // Validate salary sub-schema contract
-    const validatedSalary = salaryProfileSchema.safeParse(salary);
-    if (!validatedSalary.success) {
-      const errorMsg = validatedSalary.error.issues.map((e) => `${e.path.join(".")}: ${e.message}`).join(", ");
-      alert(`Schema Validation Failed: ${errorMsg}`);
-      console.error("Zod Schema Validation Failed", validatedSalary.error.format());
+    // Validate salary computation rules via Zod
+    const validated = salaryProfileSchema.safeParse(salary);
+    if (!validated.success) {
+      const errorMsg = validated.error.issues.map((e) => `${e.path.join(".")}: ${e.message}`).join(", ");
+      alert(`Invalid Salary Structure: ${errorMsg}`);
       return;
     }
 
-    const emp = employees.find((e) => e.id === employeeId);
-    if (!emp) return;
-
-    const updatedEmp: Employee = {
-      ...emp,
-      salary: validatedSalary.data,
-    };
-
-    // Validate full employee schema contract
-    const validatedEmp = employeeSchema.safeParse(updatedEmp);
-    if (!validatedEmp.success) {
-      const errorMsg = validatedEmp.error.issues.map((e) => `${e.path.join(".")}: ${e.message}`).join(", ");
-      alert(`Schema Validation Failed: ${errorMsg}`);
-      console.error("Zod Schema Validation Failed", validatedEmp.error.format());
-      return;
-    }
+    const updated = employees.map((e) =>
+      e.id === employeeId ? { ...e, salary: validated.data } : e
+    );
 
     if (isSupabaseConfigured()) {
       try {
-        const { error } = await supabase
-          .from("employees")
-          .update({ salary: validatedSalary.data })
-          .eq("id", employeeId);
-        if (error) throw error;
+        await supabase.from("employees").update({ salary: validated.data }).eq("id", employeeId);
       } catch (err) {
-        console.error("Supabase update failed, falling back to localState", err);
+        console.error(err);
       }
     }
 
-    const updatedEmployees = employees.map((e) =>
-      e.id === employeeId ? validatedEmp.data : e
-    );
-    setEmployees(updatedEmployees);
-    saveState("dayflow_employees", updatedEmployees);
-    addAuditLog(`updated payroll salary components for ${emp.name}`, "HR Admin");
-  };
+    setEmployees(updated);
+    saveState("dayflow_employees", updated);
 
-  const currentUser = employees.find((e) => e.id === "1") || initialEmployees[0];
+    const emp = employees.find((e) => e.id === employeeId);
+    if (emp) {
+      addAuditLog(`updated salary structure for ${emp.name}`, "HR Admin");
+    }
+  };
 
   return (
     <AppContext.Provider
       value={{
         currentRole,
         setRole: handleSetRole,
-        currentUser,
+        currentUser: employees[0] || initialEmployees[0],
         employees,
         attendance,
         leaves,
@@ -510,6 +406,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
         updateLeaveStatus,
         updateSalaryProfile,
         addAuditLog,
+        refreshData: fetchSupabaseData,
       }}
     >
       {children}
@@ -519,7 +416,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
 
 export const useApp = () => {
   const context = useContext(AppContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error("useApp must be used within an AppContextProvider");
   }
   return context;
