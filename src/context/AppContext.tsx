@@ -34,6 +34,7 @@ interface AppContextType {
   checkIn: (employeeId: string) => Promise<void>;
   checkOut: (employeeId: string) => Promise<void>;
   addEmployee: (employee: Omit<Employee, "id" | "salary"> & { baseSalary: number }) => Promise<void>;
+  removeEmployee: (employeeId: string) => Promise<void>;
   requestLeave: (leave: Omit<LeaveRequest, "id" | "status" | "employeeName" | "department" | "avatar">) => Promise<void>;
   updateLeaveStatus: (leaveId: string, status: "Approved" | "Rejected") => Promise<void>;
   updateSalaryProfile: (employeeId: string, salary: SalaryProfile) => Promise<void>;
@@ -464,6 +465,25 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
     addAuditLog(`created profile for new employee ${employee.name}`, "HR Admin");
   };
 
+  const removeEmployee = async (employeeId: string) => {
+    const emp = employees.find((e) => e.id === employeeId);
+    if (!emp) return;
+
+    if (isSupabaseConfigured()) {
+      try {
+        await supabase.from("employees").delete().eq("id", employeeId);
+      } catch (err) {
+        console.error("Supabase delete failed", err);
+      }
+    }
+
+    const updated = employees.filter((e) => e.id !== employeeId);
+    setEmployees(updated);
+    saveState("dayflow_employees", updated);
+
+    addAuditLog(`removed employee profile for ${emp.name}`, "HR Admin");
+  };
+
   const requestLeave = async (leave: Omit<LeaveRequest, "id" | "status" | "employeeName" | "department" | "avatar">) => {
     const emp = employees.find((e) => e.id === leave.employeeId);
     if (!emp) return;
@@ -567,6 +587,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
         checkIn,
         checkOut,
         addEmployee,
+        removeEmployee,
         requestLeave,
         updateLeaveStatus,
         updateSalaryProfile,

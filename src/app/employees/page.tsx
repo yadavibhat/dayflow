@@ -8,10 +8,11 @@ import { useApp } from "@/context/AppContext";
 function EmployeeDirectory() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { employees, addEmployee } = useApp();
+  const { employees, addEmployee, removeEmployee } = useApp();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
+  const [deleteConfirmEmp, setDeleteConfirmEmp] = useState<any>(null);
 
   // Form State
   const [name, setName] = useState("");
@@ -181,25 +182,39 @@ function EmployeeDirectory() {
               </div>
 
               <div
-                className="mt-4 pt-4 border-t border-border-light w-full flex justify-center gap-space-md text-secondary"
+                className="mt-4 pt-3 border-t border-border-light w-full flex justify-center items-center gap-space-md text-secondary"
                 onClick={(e) => e.stopPropagation()} // stop click bubbling
               >
                 <a
-                  className="hover:text-ink transition-colors p-1 hover:bg-surface-container-low rounded-full"
+                  className="hover:text-ink transition-colors p-1.5 hover:bg-surface-container-low rounded-full"
                   href={`mailto:${emp.email}`}
+                  title={`Email ${emp.name}`}
                 >
                   <span className="material-symbols-outlined text-[18px]">mail</span>
                 </a>
                 <a
-                  className="hover:text-ink transition-colors p-1 hover:bg-surface-container-low rounded-full"
+                  className="hover:text-ink transition-colors p-1.5 hover:bg-surface-container-low rounded-full"
                   href="#"
                   onClick={(e) => {
                     e.preventDefault();
                     alert(`Opening direct chat with ${emp.name}`);
                   }}
+                  title={`Chat with ${emp.name}`}
                 >
                   <span className="material-symbols-outlined text-[18px]">chat</span>
                 </a>
+                <button
+                  type="button"
+                  className="hover:text-rose-600 transition-colors p-1.5 hover:bg-rose-50 rounded-full cursor-pointer text-secondary"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDeleteConfirmEmp(emp);
+                  }}
+                  title={`Remove ${emp.name}'s Profile`}
+                >
+                  <span className="material-symbols-outlined text-[18px] text-rose-500 hover:text-rose-700">delete</span>
+                </button>
               </div>
             </div>
           ))}
@@ -345,6 +360,54 @@ function EmployeeDirectory() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Delete / Remove Profile Confirmation Dialog */}
+        {deleteConfirmEmp && (
+          <div className="fixed inset-0 bg-ink/50 backdrop-blur-xs flex items-center justify-center z-55 p-gutter-mobile">
+            <div className="bg-surface-container-lowest rounded-xl border border-border-light w-full max-w-md shadow-2xl p-space-lg animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center gap-3 mb-space-md">
+                <div className="w-10 h-10 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center border border-rose-100 shrink-0">
+                  <span className="material-symbols-outlined text-xl">delete_forever</span>
+                </div>
+                <div>
+                  <h3 className="font-headline-md text-base font-bold text-primary">
+                    Remove Employee Profile
+                  </h3>
+                  <p className="text-xs text-secondary">
+                    This action will delete the profile record.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3 bg-slate-50 border border-border-light rounded-lg mb-space-lg text-xs space-y-1">
+                <p className="font-bold text-primary">{deleteConfirmEmp.name}</p>
+                <p className="text-secondary">{deleteConfirmEmp.role} • {deleteConfirmEmp.department}</p>
+                <p className="font-mono text-secondary">{deleteConfirmEmp.email}</p>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-border-light">
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmEmp(null)}
+                  className="px-4 py-2 border border-border-light text-secondary text-xs font-semibold rounded-lg hover:bg-surface-container-low transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await removeEmployee(deleteConfirmEmp.id);
+                    setDeleteConfirmEmp(null);
+                  }}
+                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg shadow-sm transition-all cursor-pointer flex items-center gap-1"
+                >
+                  <span className="material-symbols-outlined text-sm">delete</span>
+                  Confirm Removal
+                </button>
+              </div>
             </div>
           </div>
         )}
