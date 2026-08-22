@@ -45,7 +45,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
   ];
 
   return (
-    <header className="bg-surface-container-lowest border-b border-border-light h-16 flex items-center justify-between w-full px-gutter-mobile md:px-gutter-desktop sticky top-0 z-40">
+    <header className="glass-panel border-b border-border-light h-16 flex items-center justify-between w-full px-gutter-mobile md:px-gutter-desktop sticky top-0 z-40 bg-surface-container-lowest/80">
       {/* Brand & Desktop SubNav */}
       <div className="flex items-center gap-space-xl h-full">
         {/* Mobile Hamburger menu */}

@@ -90,7 +90,7 @@ function EmployeeDirectory() {
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-space-md mb-space-lg">
           <div>
-            <h1 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-ink font-bold">
+            <h1 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg gradient-heading font-bold">
               Employee Directory
             </h1>
             <p className="font-body-md text-secondary mt-2">
@@ -122,7 +122,7 @@ function EmployeeDirectory() {
             <div
               key={emp.id}
               onClick={() => router.push(`/payroll/${emp.id}`)}
-              className="bg-surface-container-lowest border border-border-light rounded-xl p-space-md flex flex-col items-center text-center hover:shadow-[0_4px_12px_rgba(0,0,0,0.03)] hover:border-slate-300 transition-all duration-300 cursor-pointer group relative"
+              className="glass-card border border-border-light rounded-xl p-space-md flex flex-col items-center text-center hover-lift cursor-pointer group relative"
             >
               {/* Status Dot mapping */}
               <div className="relative mb-4">
@@ -139,7 +139,7 @@ function EmployeeDirectory() {
                 )}
                 {emp.status === "Active" && (
                   <div
-                    className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-success-text border-2 border-surface-container-lowest"
+                    className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-success-text border-2 border-surface-container-lowest pulse-active-ring"
                     title="Active"
                   ></div>
                 )}
