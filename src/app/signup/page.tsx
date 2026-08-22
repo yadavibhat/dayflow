@@ -32,8 +32,8 @@ export default function SignUpPage() {
       document.cookie = "dayflow_session=active; path=/; max-age=86400; SameSite=Lax";
     }
     setTimeout(() => {
-      router.push("/employees");
-    }, 600);
+      window.location.href = "/employees";
+    }, 400);
   };
 
   return (

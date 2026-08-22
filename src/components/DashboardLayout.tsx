@@ -7,6 +7,8 @@ import { useApp } from "@/context/AppContext";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { performLogout } from "@/lib/authLogout";
+
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
@@ -101,14 +103,17 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
         </nav>
 
         <div className="mt-auto border-t border-border-light pt-space-sm">
-          <Link
-            href="/signin"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center gap-space-sm p-space-sm text-secondary hover:bg-surface-container-high hover:text-primary rounded-xl transition-all duration-200 font-medium"
+          <button
+            type="button"
+            onClick={async () => {
+              setMobileMenuOpen(false);
+              await performLogout();
+            }}
+            className="flex items-center gap-space-sm p-space-sm text-secondary hover:bg-danger-soft hover:text-danger-text rounded-xl transition-all duration-200 font-medium cursor-pointer w-full text-left"
           >
             <span className="material-symbols-outlined">logout</span>
             <span className="text-label-md font-label-md">Log Out</span>
-          </Link>
+          </button>
         </div>
       </div>
     </div>

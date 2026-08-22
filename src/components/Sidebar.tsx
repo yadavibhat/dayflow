@@ -7,22 +7,14 @@ import { useApp } from "@/context/AppContext";
 
 import { Logo } from "@/components/Logo";
 
-import { supabase } from "@/lib/supabase/client";
+import { performLogout } from "@/lib/authLogout";
 
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
   const { currentRole } = useApp();
 
   const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut().catch(() => null);
-    } catch {
-      // ignore
-    }
-    document.cookie = "dayflow_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
-    document.cookie = "dayflow_demo_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
-    localStorage.removeItem("dayflow_authenticated");
-    window.location.href = "/signin";
+    await performLogout();
   };
 
   const navItems = [
