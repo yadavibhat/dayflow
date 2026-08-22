@@ -135,7 +135,7 @@ export default function TimeOffPage() {
                       className="w-6 h-6 rounded-full bg-surface-container-low border border-border-light flex items-center justify-center font-label-sm text-[10px] text-secondary font-bold"
                       title={l.employeeName}
                     >
-                      {l.employeeName.split(" ").map(n => n[0]).join("")}
+                      {l.employeeName.split(" ").map((n: string) => n[0]).join("")}
                     </div>
                   )
                 )}
@@ -221,78 +221,86 @@ export default function TimeOffPage() {
                 </tr>
               </thead>
               <tbody className="font-body-md text-body-md text-on-surface-variant divide-y divide-border-light">
-                {filteredLeaves.map((leave) => (
-                  <tr key={leave.id} className="hover:bg-slate-surface transition-colors group">
-                    <td className="p-space-md">
-                      <div className="flex items-center gap-3">
-                        {leave.avatar ? (
-                          <img
-                            alt={leave.employeeName}
-                            className="w-8 h-8 rounded-full border border-border-light object-cover"
-                            src={leave.avatar}
-                          />
-                        ) : (
-                          <div className="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center font-bold text-secondary text-[12px] border border-border-light">
-                            {leave.employeeName.split(" ").map(n => n[0]).join("")}
-                          </div>
-                        )}
-                        <div>
-                          <div className="font-label-md text-ink font-bold">{leave.employeeName}</div>
-                          <div className="text-[12px] text-secondary">{leave.department}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-space-md">{leave.type}</td>
-                    <td className="p-space-md text-secondary">{leave.dates}</td>
-                    <td className="p-space-md">{leave.days} {leave.days === 1 ? "day" : "days"}</td>
-                    <td className="p-space-md">
-                      {leave.status === "Pending" && (
-                        <span className="inline-flex items-center px-2 py-1 rounded bg-warning-soft text-warning-text font-label-sm text-[10px] uppercase tracking-wider border border-[#fde68a] font-bold">
-                          Pending
-                        </span>
-                      )}
-                      {leave.status === "Approved" && (
-                        <span className="inline-flex items-center px-2 py-1 rounded bg-success-soft text-success-text font-label-sm text-[10px] uppercase tracking-wider border border-[#bbf7d0] font-bold">
-                          Approved
-                        </span>
-                      )}
-                      {leave.status === "Rejected" && (
-                        <span className="inline-flex items-center px-2 py-1 rounded bg-danger-soft text-danger-text font-label-sm text-[10px] uppercase tracking-wider border border-[#fecaca] font-bold">
-                          Rejected
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-space-md text-right">
-                      {leave.status === "Pending" ? (
-                        <div className="flex justify-end gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => updateLeaveStatus(leave.id, "Approved")}
-                            className="p-1 text-success-text hover:bg-success-soft rounded border border-transparent hover:border-[#bbf7d0] transition-colors cursor-pointer"
-                            title="Approve"
-                          >
-                            <span className="material-symbols-outlined text-[20px] font-bold">check</span>
-                          </button>
-                          <button
-                            onClick={() => updateLeaveStatus(leave.id, "Rejected")}
-                            className="p-1 text-danger-text hover:bg-danger-soft rounded border border-transparent hover:border-[#fecaca] transition-colors cursor-pointer"
-                            title="Reject"
-                          >
-                            <span className="material-symbols-outlined text-[20px] font-bold">close</span>
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => alert(`Details: Leave request for ${leave.employeeName} is ${leave.status}`)}
-                          className="p-1 text-secondary hover:text-ink transition-colors lg:opacity-0 lg:group-hover:opacity-100 cursor-pointer"
-                        >
-                          <span className="material-symbols-outlined text-[20px]">more_horiz</span>
-                        </button>
-                      )}
+                {filteredLeaves.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-10 text-center text-secondary font-body-md">
+                      No leave requests found.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredLeaves.map((leave) => (
+                    <tr key={leave.id} className="hover:bg-slate-surface transition-colors group">
+                      <td className="p-space-md">
+                        <div className="flex items-center gap-3">
+                          {leave.avatar ? (
+                            <img
+                              alt={leave.employeeName}
+                              className="w-8 h-8 rounded-full border border-border-light object-cover"
+                              src={leave.avatar}
+                            />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center font-bold text-secondary text-[12px] border border-border-light">
+                              {leave.employeeName.split(" ").map((n: string) => n[0]).join("")}
+                            </div>
+                          )}
+                          <div>
+                            <div className="font-label-md text-ink font-bold">{leave.employeeName}</div>
+                            <div className="text-[12px] text-secondary">{leave.department}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-space-md">{leave.type}</td>
+                      <td className="p-space-md text-secondary">{leave.dates}</td>
+                      <td className="p-space-md">{leave.days} {leave.days === 1 ? "day" : "days"}</td>
+                      <td className="p-space-md">
+                        {leave.status === "Pending" && (
+                          <span className="inline-flex items-center px-2 py-1 rounded bg-warning-soft text-warning-text font-label-sm text-[10px] uppercase tracking-wider border border-[#fde68a] font-bold">
+                            Pending
+                          </span>
+                        )}
+                        {leave.status === "Approved" && (
+                          <span className="inline-flex items-center px-2 py-1 rounded bg-success-soft text-success-text font-label-sm text-[10px] uppercase tracking-wider border border-[#bbf7d0] font-bold">
+                            Approved
+                          </span>
+                        )}
+                        {leave.status === "Rejected" && (
+                          <span className="inline-flex items-center px-2 py-1 rounded bg-danger-soft text-danger-text font-label-sm text-[10px] uppercase tracking-wider border border-[#fecaca] font-bold">
+                            Rejected
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-space-md text-right">
+                        {leave.status === "Pending" ? (
+                          <div className="flex justify-end gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => updateLeaveStatus(leave.id, "Approved")}
+                              className="p-1 text-success-text hover:bg-success-soft rounded border border-transparent hover:border-[#bbf7d0] transition-colors cursor-pointer"
+                              title="Approve"
+                            >
+                              <span className="material-symbols-outlined text-[20px] font-bold">check</span>
+                            </button>
+                            <button
+                              onClick={() => updateLeaveStatus(leave.id, "Rejected")}
+                              className="p-1 text-danger-text hover:bg-danger-soft rounded border border-transparent hover:border-[#fecaca] transition-colors cursor-pointer"
+                              title="Reject"
+                            >
+                              <span className="material-symbols-outlined text-[20px] font-bold">close</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => alert(`Details: Leave request for ${leave.employeeName} is ${leave.status}`)}
+                            className="p-1 text-secondary hover:text-ink transition-colors lg:opacity-0 lg:group-hover:opacity-100 cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-[20px]">more_horiz</span>
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
-            </table>
+              </table>
           </div>
         </div>
 

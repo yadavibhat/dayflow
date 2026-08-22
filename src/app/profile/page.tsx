@@ -24,7 +24,7 @@ export default function MyProfilePage() {
                   />
                 ) : (
                   <div className="w-full h-full bg-surface-container-high flex items-center justify-center text-secondary text-4xl font-bold font-sans">
-                    {currentUser.name.split(" ").map(n => n[0]).join("")}
+                    {currentUser.name.split(" ").map((n: string) => n[0]).join("")}
                   </div>
                 )}
               </div>
