@@ -17,7 +17,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
   const { currentRole } = useApp();
 
   const navItems = [
-    { name: "Dashboard", href: "/", icon: "dashboard", visible: true },
+    { name: "Dashboard", href: "/dashboard", icon: "dashboard", visible: true },
     { name: "Employees", href: "/employees", icon: "groups", visible: true },
     { name: "Attendance", href: "/attendance", icon: "clinical_notes", visible: true },
     { name: "Time Off", href: "/timeoff", icon: "event_busy", visible: true },
