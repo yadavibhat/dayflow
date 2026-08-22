@@ -8,14 +8,24 @@ import { useApp } from "@/context/AppContext";
 import { Card } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { useDashboardStats } from "@/hooks/useDashboardStats";
 
 export default function OverviewPage() {
   const router = useRouter();
   const { employees, leaves, auditLogs } = useApp();
 
-  // Compute stats
-  const totalEmployees = employees.length;
-  const pendingLeaves = leaves.filter((l) => l.status === "Pending").length;
+  // Live Supabase stats — fallback to AppContext local state when not configured
+  const { stats, loading: statsLoading } = useDashboardStats({
+    fallback: {
+      totalEmployees: employees.length,
+      pendingLeaveCount: leaves.filter((l) => l.status === "Pending").length,
+      presentToday: 0,
+    },
+  });
+
+  const totalEmployees = stats.totalEmployees || employees.length;
+  const pendingLeaves = stats.pendingLeaveCount;
+  const presentToday = stats.presentToday;
 
   const handleExport = () => {
     // Simulate log export
@@ -55,33 +65,38 @@ export default function OverviewPage() {
 
         {/* Metrics Grid */}
         <section className="grid grid-cols-1 md:grid-cols-3 gap-space-md mb-space-xxl">
-          <StatCard
-            title="Total Employees"
-            value={totalEmployees}
-            icon="groups"
-            trendText="+1 this month"
-            trendDirection="up"
-          />
+          <div className={statsLoading ? "opacity-60 animate-pulse" : ""}>
+            <StatCard
+              title="Total Employees"
+              value={statsLoading ? "—" : totalEmployees}
+              icon="groups"
+              trendText="+1 this month"
+              trendDirection="up"
+            />
+          </div>
 
-          <StatCard
-            title="Active Leave Requests"
-            value={leaves.length}
-            icon="event_note"
-            iconBgClass="bg-warning-soft text-warning-text"
-            trendText={`${pendingLeaves} require approval`}
-            trendDirection={pendingLeaves > 0 ? "down" : "neutral"}
-            trendIcon="pending_actions"
-          />
+          <div className={statsLoading ? "opacity-60 animate-pulse" : ""}>
+            <StatCard
+              title="Present Today"
+              value={statsLoading ? "—" : presentToday}
+              icon="how_to_reg"
+              iconBgClass="bg-success-soft text-success-text"
+              trendText={`${totalEmployees > 0 ? Math.round((presentToday / Math.max(totalEmployees, 1)) * 100) : 0}% attendance rate`}
+              trendDirection={presentToday > 0 ? "up" : "neutral"}
+            />
+          </div>
 
-          <StatCard
-            title="Payroll Status"
-            value="Processed"
-            icon="payments"
-            iconBgClass="bg-success-soft text-success-text"
-            trendText="Next run: Oct 31"
-            trendDirection="neutral"
-            trendIcon="check_circle"
-          />
+          <div className={statsLoading ? "opacity-60 animate-pulse" : ""}>
+            <StatCard
+              title="Pending Leave Approvals"
+              value={statsLoading ? "—" : pendingLeaves}
+              icon="event_note"
+              iconBgClass="bg-warning-soft text-warning-text"
+              trendText={pendingLeaves > 0 ? `${pendingLeaves} require review` : "All clear"}
+              trendDirection={pendingLeaves > 0 ? "down" : "neutral"}
+              trendIcon={pendingLeaves > 0 ? "pending_actions" : "check_circle"}
+            />
+          </div>
         </section>
 
         {/* Main Content Grid */}

@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useApp } from "@/context/AppContext";
-
+import { useCheckInStatus } from "@/hooks/useDashboardStats";
 import { Logo } from "@/components/Logo";
 
 interface HeaderProps {
@@ -27,13 +27,24 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
-  // Check if checked in today
+  // Live Supabase check-in status with AppContext as immediate fallback
   const todayStr = new Date().toISOString().split("T")[0];
   const todayAttendance = attendance.find(
     (a) => a.employeeId === currentUser.id && a.date === todayStr
   );
-  const isCheckedIn = todayAttendance && todayAttendance.checkIn !== "--:--";
-  const isCheckedOut = todayAttendance && todayAttendance.checkOut !== "--:--";
+  const localCheckedIn =
+    !!todayAttendance && todayAttendance.checkIn !== "--:--";
+  const localCheckedOut =
+    !!todayAttendance && todayAttendance.checkOut !== "--:--";
+
+  const { status: liveStatus } = useCheckInStatus(currentUser.id, {
+    checkedIn: localCheckedIn,
+    checkedOut: localCheckedOut,
+    checkInTime: todayAttendance?.checkIn ?? null,
+  });
+
+  const isCheckedIn = liveStatus.checkedIn;
+  const isCheckedOut = liveStatus.checkedOut;
 
   const toggleRole = () => {
     setRole(currentRole === "admin" ? "employee" : "admin");
