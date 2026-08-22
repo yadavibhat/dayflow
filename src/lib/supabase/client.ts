@@ -18,3 +18,6 @@ export const createSupabaseClient = () => {
 
 // Singelton client instance for quick standard queries
 export const supabase = createSupabaseClient();
+
+// Compatibility alias
+export const createClient = createSupabaseClient;
