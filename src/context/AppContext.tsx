@@ -1,70 +1,26 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase/client";
 import { executeCheckIn, executeCheckOut } from "@/services/attendanceService";
+import {
+  employeeSchema,
+  leaveRequestSchema,
+  salaryProfileSchema,
+  Employee,
+  SalaryProfile,
+  AttendanceLog,
+  LeaveRequest,
+  AuditLog,
+} from "@/lib/validations/schemas";
 
-export interface SalaryProfile {
-  base: number;
-  basicPct: number;
-  hraPct: number;
-  stdPct: number;
-  pfPct: number;
-  ptFixed: number;
-}
-
-export interface Employee {
-  id: string;
-  name: string;
-  role: string;
-  department: string;
-  status: "Active" | "Away" | "On Leave";
-  avatar: string;
-  email: string;
-  phone: string;
-  dob: string;
-  nationality: string;
-  maritalStatus: string;
-  address: string;
-  doj: string;
-  bankName: string;
-  accountNo: string;
-  routingNo: string;
-  panTaxId: string;
-  uan: string;
-  salary: SalaryProfile;
-}
-
-export interface AttendanceLog {
-  id: string;
-  employeeId: string;
-  employeeName: string;
-  checkIn: string; // e.g. "08:55 AM"
-  checkOut: string; // e.g. "05:05 PM" or "--:--"
-  workHours: string; // e.g. "8h 10m" or "--"
-  extraHours: string; // e.g. "1h 30m" or "-"
-  status: "Present" | "Late" | "On Leave";
-  date: string; // e.g. "2026-08-22"
-}
-
-export interface LeaveRequest {
-  id: string;
-  employeeId: string;
-  employeeName: string;
-  department: string;
-  type: string; // e.g. "Paid Time Off", "Sick Leave"
-  dates: string; // e.g. "Oct 12 - Oct 16"
-  days: number;
-  status: "Pending" | "Approved" | "Rejected";
-  avatar: string;
-}
-
-export interface AuditLog {
-  id: string;
-  user: string;
-  action: string;
-  timestamp: string; // e.g. "2 mins ago"
-  ipAddress: string;
-}
+export type {
+  Employee,
+  SalaryProfile,
+  AttendanceLog,
+  LeaveRequest,
+  AuditLog,
+};
 
 interface AppContextType {
   currentRole: "admin" | "employee";
@@ -74,121 +30,38 @@ interface AppContextType {
   attendance: AttendanceLog[];
   leaves: LeaveRequest[];
   auditLogs: AuditLog[];
-  checkIn: (employeeId: string) => void;
-  checkOut: (employeeId: string) => void;
-  addEmployee: (employee: Omit<Employee, "id" | "salary"> & { baseSalary: number }) => void;
-  requestLeave: (leave: Omit<LeaveRequest, "id" | "status" | "employeeName" | "department" | "avatar">) => void;
-  updateLeaveStatus: (leaveId: string, status: "Approved" | "Rejected") => void;
-  updateSalaryProfile: (employeeId: string, salary: SalaryProfile) => void;
+  checkIn: (employeeId: string) => Promise<void>;
+  checkOut: (employeeId: string) => Promise<void>;
+  addEmployee: (employee: Omit<Employee, "id" | "salary"> & { baseSalary: number }) => Promise<void>;
+  requestLeave: (leave: Omit<LeaveRequest, "id" | "status" | "employeeName" | "department" | "avatar">) => Promise<void>;
+  updateLeaveStatus: (leaveId: string, status: "Approved" | "Rejected") => Promise<void>;
+  updateSalaryProfile: (employeeId: string, salary: SalaryProfile) => Promise<void>;
   addAuditLog: (action: string, user: string) => void;
+  refreshData: () => Promise<void>;
 }
 
 const initialEmployees: Employee[] = [
   {
     id: "1",
-    name: "Sarah Jenkins",
-    role: "Senior UX Designer",
-    department: "Design",
-    status: "Active",
-    avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuCsN9BslSZuNvbHJ31AIrtAKbS1q7MQQNwsSGoRi5uaPsFGZqVD9hLMwbNUfk7YMVP37UIQga81PK6KpOnkdIp-4LpPvGEVOy75hMJcpJWXVHb8hSI3OkDv9rXzpOCPbdxmwShAORvyG4N72qWPl3FJwewOD1hNofPRJr4MGSlRikay2egBCWyvyR1U0EVGQkwFM2XDDZWrYu6rpe4dJDUxYmofGF6ALukotpzmApBAP617Wl0tCG6L3w",
-    email: "sarah.jenkins@company.com",
-    phone: "+44 20 7946 0958",
-    dob: "October 14, 1990",
-    nationality: "American",
-    maritalStatus: "Single",
-    address: "1248 Horizon Boulevard, Apt 4B, San Francisco, CA 94107",
-    doj: "March 01, 2021",
-    bankName: "Chase Manhattan Bank",
-    accountNo: "•••• •••• •••• 4921",
-    routingNo: "CHASUS33XXX",
-    panTaxId: "ABCDE1234F",
-    uan: "100982736451",
-    salary: {
-      base: 85000,
-      basicPct: 50,
-      hraPct: 25,
-      stdPct: 10,
-      pfPct: 12,
-      ptFixed: 200,
-    },
-  },
-  {
-    id: "2",
-    name: "Marcus Chen",
-    role: "Senior Developer",
+    name: "Aarav Sharma",
+    role: "Senior Software Engineer",
     department: "Engineering",
-    status: "Away",
-    avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuAJoImG_2tVUSWfkp6Pg61zn_u5pptX2HqwCkCf4OVnu3dYze7cDf3HsGqdsj-Ll0JEQF42Wo7mTNcQIcMPt4xVVBHvQkuJ_JHJDBDTfci4dR5zh6JZoOXBBGO0RQNTSP_Giw89gK8ALZ82FNyDtCIT9biu2N4kLpnZyGqkVUki1M8uehotf2nNEEiGIKyBhn6I5Ngq9LEqSYrf6IwngoWaPeJREJ61q8Mh2usETksR3F9LLdZnR--1jA",
-    email: "marcus.chen@company.com",
-    phone: "+44 20 7946 0192",
-    dob: "November 23, 1988",
-    nationality: "British",
-    maritalStatus: "Married",
-    address: "88 Baker Street, London, NW1 6XE",
-    doj: "June 15, 2020",
-    bankName: "HSBC UK",
-    accountNo: "•••• •••• •••• 8102",
-    routingNo: "MIDLGB21XXX",
-    panTaxId: "XYZPQ9876G",
-    uan: "100982736452",
-    salary: {
-      base: 95000,
-      basicPct: 50,
-      hraPct: 25,
-      stdPct: 10,
-      pfPct: 12,
-      ptFixed: 200,
-    },
-  },
-  {
-    id: "3",
-    name: "Elena Rodriguez",
-    role: "Marketing Lead",
-    department: "Marketing",
-    status: "On Leave",
-    avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuA6iNt060oLDzl0Q5PleQ07zGQSElZr0qsgtUK6yIlXipZTUU5JEykg6wcqKqA2GDXp12tQxKk0uJAYPQg3py53-_oX4rygENg1mYy15nkao1Oan97KVlM_6eAHDouBNWUyfxAD2UN7leaIv46W-1Tt_AQyynVmWsI7gy7sNxnB70vSsX6B_klsEakUvmB8jNtoE0O9y78FU9OqtbDORsf_fEKxF-Qa01pmM8060VX4G20bJ8bNKHppqA",
-    email: "elena.rodriguez@company.com",
-    phone: "+44 20 7946 0451",
-    dob: "April 05, 1993",
-    nationality: "Spanish",
-    maritalStatus: "Single",
-    address: "14 Valencia Court, London, SE1 7TY",
-    doj: "September 10, 2022",
-    bankName: "Santander UK",
-    accountNo: "•••• •••• •••• 1290",
-    routingNo: "SOCOGB2LXXX",
-    panTaxId: "LMNOS4321H",
-    uan: "100982736453",
-    salary: {
-      base: 75000,
-      basicPct: 50,
-      hraPct: 25,
-      stdPct: 10,
-      pfPct: 12,
-      ptFixed: 200,
-    },
-  },
-  {
-    id: "4",
-    name: "David Torres",
-    role: "FinOps Manager",
-    department: "Finance",
     status: "Active",
     avatar: "",
-    email: "david.torres@company.com",
-    phone: "+44 20 7946 0233",
-    dob: "January 19, 1985",
-    nationality: "Spanish",
-    maritalStatus: "Married",
-    address: "22 Gran Via, Madrid, Spain",
-    doj: "January 15, 2019",
-    bankName: "Banco Santander",
-    accountNo: "•••• •••• •••• 5543",
-    routingNo: "BSCHES28XXX",
-    panTaxId: "TAXES5543T",
-    uan: "100982736454",
+    email: "aarav.sharma@company.in",
+    phone: "+91 98765 43210",
+    dob: "August 15, 1995",
+    nationality: "Indian",
+    maritalStatus: "Single",
+    address: "42, Residency Road, Bengaluru, Karnataka 560025",
+    doj: "March 01, 2021",
+    bankName: "State Bank of India",
+    accountNo: "•••• •••• •••• 5678",
+    routingNo: "SBIN0000123",
+    panTaxId: "ABCPS1234Z",
+    uan: "100982736451",
     salary: {
-      base: 80000,
+      base: 1200000,
       basicPct: 50,
       hraPct: 25,
       stdPct: 10,
@@ -198,114 +71,35 @@ const initialEmployees: Employee[] = [
   },
 ];
 
-const initialAttendance: AttendanceLog[] = [
-  {
-    id: "a1",
-    employeeId: "1",
-    employeeName: "Sarah Jenkins",
-    checkIn: "08:55 AM",
-    checkOut: "05:05 PM",
-    workHours: "8h 10m",
-    extraHours: "-",
-    status: "Present",
-    date: "2026-08-21",
-  },
-  {
-    id: "a2",
-    employeeId: "2",
-    employeeName: "Marcus Chen",
-    checkIn: "09:15 AM",
-    checkOut: "--:--",
-    workHours: "--",
-    extraHours: "-",
-    status: "Late",
-    date: "2026-08-22",
-  },
-  {
-    id: "a3",
-    employeeId: "3",
-    employeeName: "Elena Rodriguez",
-    checkIn: "--:--",
-    checkOut: "--:--",
-    workHours: "--",
-    extraHours: "-",
-    status: "On Leave",
-    date: "2026-08-22",
-  },
-  {
-    id: "a4",
-    employeeId: "4",
-    employeeName: "David Torres",
-    checkIn: "08:00 AM",
-    checkOut: "06:30 PM",
-    workHours: "9h 00m",
-    extraHours: "1h 30m",
-    status: "Present",
-    date: "2026-08-21",
-  },
-];
-
-const initialLeaves: LeaveRequest[] = [
-  {
-    id: "l1",
-    employeeId: "2",
-    employeeName: "Michael Chen",
-    department: "Engineering",
-    type: "Paid Time Off",
-    dates: "Oct 12 - Oct 16",
-    days: 5,
-    status: "Pending",
-    avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuDloPnLQwoN5GqO4SUBvG20hfUAr8mlfe_SCKkX2aMOT5pD-su7BPlTQ1YMTVwvN3CCE6PBLQwKUfoRUnNTgPkhmeptesYnfdaJbCdXgODKePfuY4ZGDRLFYoElVvZxSD1dqZIp_uso4drVmf29Vk06zugztUG1hFuHIAZ9RfytaIvuYEtrFU7nGKem0rqFBRS3L0wA8jIoNSsIutlHCptMiPFjsX4McA9NqQFH-mnFuzDWKOpNY0eV9w",
-  },
-  {
-    id: "l2",
-    employeeId: "3",
-    employeeName: "Elena Rodriguez",
-    department: "Marketing",
-    type: "Sick Leave",
-    dates: "Oct 10 (Half Day)",
-    days: 0.5,
-    status: "Approved",
-    avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuA6iNt060oLDzl0Q5PleQ07zGQSElZr0qsgtUK6yIlXipZTUU5JEykg6wcqKqA2GDXp12tQxKk0uJAYPQg3py53-_oX4rygENg1mYy15nkao1Oan97KVlM_6eAHDouBNWUyfxAD2UN7leaIv46W-1Tt_AQyynVmWsI7gy7sNxnB70vSsX6B_klsEakUvmB8jNtoE0O9y78FU9OqtbDORsf_fEKxF-Qa01pmM8060VX4G20bJ8bNKHppqA",
-  },
-  {
-    id: "l3",
-    employeeId: "1",
-    employeeName: "Sarah Jenkins",
-    department: "Design",
-    type: "Unpaid Leave",
-    dates: "Nov 01 - Nov 05",
-    days: 5,
-    status: "Rejected",
-    avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuCsN9BslSZuNvbHJ31AIrtAKbS1q7MQQNwsSGoRi5uaPsFGZqVD9hLMwbNUfk7YMVP37UIQga81PK6KpOnkdIp-4LpPvGEVOy75hMJcpJWXVHb8hSI3OkDv9rXzpOCPbdxmwShAORvyG4N72qWPl3FJwewOD1hNofPRJr4MGSlRikay2egBCWyvyR1U0EVGQkwFM2XDDZWrYu6rpe4dJDUxYmofGF6ALukotpzmApBAP617Wl0tCG6L3w",
-  },
-];
-
+const initialAttendance: AttendanceLog[] = [];
+const initialLeaves: LeaveRequest[] = [];
 const initialAuditLogs: AuditLog[] = [
   {
     id: "log1",
-    user: "Sarah Jenkins",
-    action: "updated role mapping for Design Department",
-    timestamp: "2 mins ago",
-    ipAddress: "192.168.1.45",
-  },
-  {
-    id: "log2",
-    user: "System Auto",
-    action: "generated monthly payroll report #PR-2023-10",
-    timestamp: "1 hour ago",
-    ipAddress: "System Process",
-  },
-  {
-    id: "log3",
-    user: "Michael Chang",
-    action: "requested elevated permissions for FinOps Module",
-    timestamp: "3 hours ago",
-    ipAddress: "Pending Approval",
+    user: "System",
+    action: "HRMS application initialized successfully",
+    timestamp: "Just now",
+    ipAddress: "127.0.0.1",
   },
 ];
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
+
+// Helper check to identify if actual credentials are setup in environment
+export const isSupabaseConfigured = () => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  return (
+    url !== undefined &&
+    key !== undefined &&
+    url !== "" &&
+    key !== "" &&
+    !url.includes("your-placeholder-url") &&
+    !key.includes("your-placeholder-anon-key") &&
+    !url.includes("your-project-id") &&
+    !key.includes("your-supabase-anon-key")
+  );
+};
 
 export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -316,29 +110,68 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
   const [leaves, setLeaves] = useState<LeaveRequest[]>(initialLeaves);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(initialAuditLogs);
 
-  // Load from localStorage on mount (client-side only)
-  useEffect(() => {
-    const localRole = localStorage.getItem("dayflow_role");
-    const localEmployees = localStorage.getItem("dayflow_employees");
-    const localAttendance = localStorage.getItem("dayflow_attendance");
-    const localLeaves = localStorage.getItem("dayflow_leaves");
-    const localLogs = localStorage.getItem("dayflow_logs");
+  const fetchSupabaseData = async () => {
+    if (!isSupabaseConfigured()) return;
+    try {
+      const [empRes, attRes, leaveRes] = await Promise.all([
+        supabase.from("employees").select("*"),
+        supabase.from("attendance").select("*"),
+        supabase.from("leaves").select("*"),
+      ]);
 
-    if (localRole) setRole(localRole as "admin" | "employee");
-    if (localEmployees) setEmployees(JSON.parse(localEmployees));
-    if (localAttendance) setAttendance(JSON.parse(localAttendance));
-    if (localLeaves) setLeaves(JSON.parse(localLeaves));
-    if (localLogs) setAuditLogs(JSON.parse(localLogs));
+      if (empRes.data && empRes.data.length > 0) setEmployees(empRes.data);
+      if (attRes.data) setAttendance(attRes.data);
+      if (leaveRes.data) setLeaves(leaveRes.data);
+    } catch (err) {
+      console.warn("Supabase fetch failed, fallback to local storage state", err);
+    }
+  };
+
+  // Load from localStorage or Supabase on mount
+  useEffect(() => {
+    if (isSupabaseConfigured()) {
+      fetchSupabaseData();
+    } else {
+      const localRole = localStorage.getItem("dayflow_role");
+      const localEmployees = localStorage.getItem("dayflow_employees");
+      const localAttendance = localStorage.getItem("dayflow_attendance");
+      const localLeaves = localStorage.getItem("dayflow_leaves");
+      const localLogs = localStorage.getItem("dayflow_logs");
+
+      if (localRole) setRole(localRole as "admin" | "employee");
+      if (localEmployees) {
+        try {
+          setEmployees(JSON.parse(localEmployees));
+        } catch {}
+      }
+      if (localAttendance) {
+        try {
+          setAttendance(JSON.parse(localAttendance));
+        } catch {}
+      }
+      if (localLeaves) {
+        try {
+          setLeaves(JSON.parse(localLeaves));
+        } catch {}
+      }
+      if (localLogs) {
+        try {
+          setAuditLogs(JSON.parse(localLogs));
+        } catch {}
+      }
+    }
   }, []);
 
   // Save updates to localStorage
   const saveState = (key: string, value: any) => {
-    localStorage.setItem(key, JSON.stringify(value));
+    if (typeof window !== "undefined") {
+      localStorage.setItem(key, JSON.stringify(value));
+    }
   };
 
   const handleSetRole = (role: "admin" | "employee") => {
     setRole(role);
-    localStorage.setItem("dayflow_role", role);
+    saveState("dayflow_role", role);
   };
 
   const addAuditLog = (action: string, user: string) => {
@@ -363,6 +196,15 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
       throw new Error(result.error || "Check-in failed");
     }
 
+    if (isSupabaseConfigured()) {
+      try {
+        await supabase.from("attendance").upsert([result.record]);
+        await supabase.from("employees").update({ status: "Active" }).eq("id", employeeId);
+      } catch (err) {
+        console.error("Supabase checkIn error:", err);
+      }
+    }
+
     const updated = [result.record, ...attendance.filter((a) => !(a.employeeId === employeeId && a.date === result.record!.date))];
     setAttendance(updated);
     saveState("dayflow_attendance", updated);
@@ -384,10 +226,25 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
       throw new Error(result.error || "Check-out failed");
     }
 
+    if (isSupabaseConfigured()) {
+      try {
+        await supabase
+          .from("attendance")
+          .update({
+            checkOut: result.record.checkOut,
+            workHours: result.record.workHours,
+            extraHours: result.record.extraHours,
+          })
+          .eq("id", result.record.id);
+        await supabase.from("employees").update({ status: "Away" }).eq("id", employeeId);
+      } catch (err) {
+        console.error("Supabase checkOut error:", err);
+      }
+    }
+
     const updatedAttendance = attendance.map((log) =>
       log.id === result.record!.id ? result.record! : log
     );
-    // If not found in memory, add it
     if (!updatedAttendance.some((l) => l.id === result.record!.id)) {
       updatedAttendance.unshift(result.record!);
     }
@@ -404,7 +261,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
     addAuditLog(`checked out at ${result.record.checkOut} (${result.record.workHours} worked)`, emp ? emp.name : result.record.employeeName);
   };
 
-  const addEmployee = (employee: Omit<Employee, "id" | "salary"> & { baseSalary: number }) => {
+  const addEmployee = async (employee: Omit<Employee, "id" | "salary"> & { baseSalary: number }) => {
     const newId = String(employees.length + 1);
     const newEmp: Employee = {
       ...employee,
@@ -419,14 +276,32 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
       },
     };
 
-    const updated = [...employees, newEmp];
+    // Zod validation contract enforcement
+    const validated = employeeSchema.safeParse(newEmp);
+    if (!validated.success) {
+      const errorMsg = validated.error.issues.map((e) => `${e.path.join(".")}: ${e.message}`).join(", ");
+      alert(`Schema Validation Failed: ${errorMsg}`);
+      console.error("Zod Schema Validation Failed", validated.error.format());
+      return;
+    }
+
+    if (isSupabaseConfigured()) {
+      try {
+        const { error } = await supabase.from("employees").insert([validated.data]);
+        if (error) throw error;
+      } catch (err) {
+        console.error("Supabase insert failed, falling back to localState", err);
+      }
+    }
+
+    const updated = [...employees, validated.data];
     setEmployees(updated);
     saveState("dayflow_employees", updated);
 
     addAuditLog(`created profile for new employee ${employee.name}`, "HR Admin");
   };
 
-  const requestLeave = (leave: Omit<LeaveRequest, "id" | "status" | "employeeName" | "department" | "avatar">) => {
+  const requestLeave = async (leave: Omit<LeaveRequest, "id" | "status" | "employeeName" | "department" | "avatar">) => {
     const emp = employees.find((e) => e.id === leave.employeeId);
     if (!emp) return;
 
@@ -439,73 +314,87 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
       avatar: emp.avatar,
     };
 
-    const updated = [newRequest, ...leaves];
+    // Zod schema enforcement
+    const validated = leaveRequestSchema.safeParse(newRequest);
+    if (!validated.success) {
+      const errorMsg = validated.error.issues.map((e) => `${e.path.join(".")}: ${e.message}`).join(", ");
+      alert(`Leave Request Failed Validation: ${errorMsg}`);
+      return;
+    }
+
+    if (isSupabaseConfigured()) {
+      try {
+        await supabase.from("leaves").insert([validated.data]);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    const updated = [validated.data, ...leaves];
     setLeaves(updated);
     saveState("dayflow_leaves", updated);
 
-    addAuditLog(`submitted a request for ${leave.type} (${leave.dates})`, emp.name);
+    addAuditLog(`requested ${leave.type} (${leave.dates})`, emp.name);
   };
 
-  const updateLeaveStatus = (leaveId: string, status: "Approved" | "Rejected") => {
-    const updatedLeaves = leaves.map((l) =>
+  const updateLeaveStatus = async (leaveId: string, status: "Approved" | "Rejected") => {
+    const updated = leaves.map((l) =>
       l.id === leaveId ? { ...l, status } : l
     );
-    setLeaves(updatedLeaves);
-    saveState("dayflow_leaves", updatedLeaves);
+
+    if (isSupabaseConfigured()) {
+      try {
+        await supabase.from("leaves").update({ status }).eq("id", leaveId);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    setLeaves(updated);
+    saveState("dayflow_leaves", updated);
 
     const leave = leaves.find((l) => l.id === leaveId);
     if (leave) {
       addAuditLog(`${status.toLowerCase()} leave request for ${leave.employeeName}`, "HR Admin");
-
-      // Update employee status to On Leave if Approved
-      if (status === "Approved") {
-        const todayStr = new Date().toISOString().split("T")[0];
-        // Create an attendance record for On Leave
-        const newRecord: AttendanceLog = {
-          id: `att${Date.now()}`,
-          employeeId: leave.employeeId,
-          employeeName: leave.employeeName,
-          checkIn: "--:--",
-          checkOut: "--:--",
-          workHours: "--",
-          extraHours: "-",
-          status: "On Leave",
-          date: todayStr,
-        };
-        const updatedAttendance = [newRecord, ...attendance];
-        setAttendance(updatedAttendance);
-        saveState("dayflow_attendance", updatedAttendance);
-
-        const updatedEmployees = employees.map((e) =>
-          e.id === leave.employeeId ? { ...e, status: "On Leave" as const } : e
-        );
-        setEmployees(updatedEmployees);
-        saveState("dayflow_employees", updatedEmployees);
-      }
     }
   };
 
-  const updateSalaryProfile = (employeeId: string, salary: SalaryProfile) => {
-    const updatedEmployees = employees.map((e) =>
-      e.id === employeeId ? { ...e, salary } : e
+  const updateSalaryProfile = async (employeeId: string, salary: SalaryProfile) => {
+    // Validate salary computation rules via Zod
+    const validated = salaryProfileSchema.safeParse(salary);
+    if (!validated.success) {
+      const errorMsg = validated.error.issues.map((e) => `${e.path.join(".")}: ${e.message}`).join(", ");
+      alert(`Invalid Salary Structure: ${errorMsg}`);
+      return;
+    }
+
+    const updated = employees.map((e) =>
+      e.id === employeeId ? { ...e, salary: validated.data } : e
     );
-    setEmployees(updatedEmployees);
-    saveState("dayflow_employees", updatedEmployees);
+
+    if (isSupabaseConfigured()) {
+      try {
+        await supabase.from("employees").update({ salary: validated.data }).eq("id", employeeId);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    setEmployees(updated);
+    saveState("dayflow_employees", updated);
 
     const emp = employees.find((e) => e.id === employeeId);
     if (emp) {
-      addAuditLog(`updated payroll salary components for ${emp.name}`, "HR Admin");
+      addAuditLog(`updated salary structure for ${emp.name}`, "HR Admin");
     }
   };
-
-  const currentUser = employees.find((e) => e.id === "1") || initialEmployees[0];
 
   return (
     <AppContext.Provider
       value={{
         currentRole,
         setRole: handleSetRole,
-        currentUser,
+        currentUser: employees[0] || initialEmployees[0],
         employees,
         attendance,
         leaves,
@@ -517,6 +406,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
         updateLeaveStatus,
         updateSalaryProfile,
         addAuditLog,
+        refreshData: fetchSupabaseData,
       }}
     >
       {children}
@@ -526,7 +416,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
 
 export const useApp = () => {
   const context = useContext(AppContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error("useApp must be used within an AppContextProvider");
   }
   return context;
