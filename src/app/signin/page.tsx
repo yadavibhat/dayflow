@@ -14,10 +14,10 @@ export default function SignInPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // Simulate login redirecting to dashboard
+    // Redirect directly to Employee Directory per wireframe specification
     setTimeout(() => {
-      router.push("/dashboard");
-    }, 800);
+      router.push("/employees");
+    }, 600);
   };
 
   return (
