@@ -8,7 +8,7 @@ import {
   mapEmployeeToDb
 } from "@/lib/types/employee";
 import { revalidatePath } from "next/cache";
-import { EmployeeSelfEditSchema, EmployeeSchema } from "@/lib/validations/employee";
+import { EmployeeSelfEditSchema, EmployeeSchema, EmployeeCreateSchema } from "@/lib/validations/employee";
 
 /**
  * Fetches all employees. HR/Admin only — employees cannot list the full directory.
@@ -277,3 +277,161 @@ export async function updateEmployeeProfile(employeeId: string, updates: Partial
     return { success: false, error: err.message || "Failed to update profile" };
   }
 }
+
+/**
+ * Creates a new employee profile and underlying auth credentials.
+ * HR/Admin only — restricted server-side.
+ */
+export async function createEmployee(data: any) {
+  try {
+    const supabase = await createClient();
+
+    // 1. Server-side Gate: Authorize caller role
+    const { profile, error: authErr } = await getCurrentProfile();
+    if (authErr || !profile) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    if (profile.role === "employee") {
+      return { success: false, error: "Access Denied: HR or Admin role required" };
+    }
+
+    // 2. Validate form fields using Zod
+    const validated = EmployeeCreateSchema.safeParse(data);
+    if (!validated.success) {
+      const errorMsg = validated.error.issues.map(issue => `${issue.path.join(".")}: ${issue.message}`).join(", ");
+      return { success: false, error: `Validation Error: ${errorMsg}` };
+    }
+
+    const { name, phone, department, role: designation, doj, managerId, address, email } = validated.data;
+
+    // 3. Parse joining year from Date of Joining (doj)
+    let year = new Date().getFullYear();
+    if (doj.includes("-")) {
+      const parsed = new Date(doj);
+      if (!isNaN(parsed.getTime())) {
+        year = parsed.getFullYear();
+      }
+    } else {
+      const yearMatch = doj.match(/\b\d{4}\b/);
+      if (yearMatch) {
+        year = parseInt(yearMatch[0], 10);
+      }
+    }
+
+    // 4. Generate first 2 letters of company name + first 2 letters of (first name + last name)
+    const companyPrefix = "DA"; // "DA" from Dayflow
+    const nameParts = name.trim().split(/\s+/);
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : firstName;
+    const namePrefix = (firstName.slice(0, 2) + lastName.slice(0, 2)).toUpperCase().padEnd(4, "X");
+
+    // 5. Query max serial number for that year to increment
+    const searchPattern = `${companyPrefix}${namePrefix}${year}%`;
+    const { data: existingCodes, error: dbErr } = await supabase
+      .from("employees")
+      .select("employee_code")
+      .like("employee_code", searchPattern);
+
+    if (dbErr) {
+      return { success: false, error: `Database error querying employee codes: ${dbErr.message}` };
+    }
+
+    let maxSerial = 0;
+    if (existingCodes) {
+      for (const row of existingCodes) {
+        const code = row.employee_code;
+        if (code && code.length === 14) {
+          const codeYear = code.substring(6, 10);
+          if (codeYear === String(year)) {
+            const serialStr = code.substring(10, 14);
+            const serialNum = parseInt(serialStr, 10);
+            if (!isNaN(serialNum) && serialNum > maxSerial) {
+              maxSerial = serialNum;
+            }
+          }
+        }
+      }
+    }
+
+    const nextSerial = maxSerial + 1;
+    const serialStr = String(nextSerial).padStart(4, "0");
+    const employeeCode = `${companyPrefix}${namePrefix}${year}${serialStr}`;
+
+    // Defensively check for duplicate employee code
+    const { data: duplicateCheck } = await supabase
+      .from("employees")
+      .select("id")
+      .eq("employee_code", employeeCode)
+      .maybeSingle();
+
+    if (duplicateCheck) {
+      return { success: false, error: `System Error: Generated employee code ${employeeCode} already exists.` };
+    }
+
+    // 6. Stub Auth User creation (dependency on Yadavi's auth module)
+    // We generate a Login ID (same as employeeCode) and a temporary password.
+    // In a production build, this would invoke Yadavi's createAuthUser helper.
+    const tempPassword = `Dayflow@${Math.random().toString(36).slice(-6).toUpperCase()}`;
+    const stubProfileId = `stub-profile-${Date.now()}`;
+
+    // 7. Insert the new employee row into Database
+    const newDbEmployee = {
+      profile_id: stubProfileId,
+      employee_code: employeeCode,
+      full_name: name,
+      phone: phone || null,
+      address: address || null,
+      department: department,
+      designation: designation,
+      joining_date: doj,
+      manager_id: managerId || null,
+      status: "Active",
+      salary_structure: {
+        base: 50000, // Default base salary structure
+        basicPct: 50,
+        hraPct: 25,
+        stdPct: 10,
+        pfPct: 12,
+        ptFixed: 200,
+      },
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data: inserted, error: insertError } = await supabase
+      .from("employees")
+      .insert([newDbEmployee])
+      .select()
+      .single();
+
+    if (insertError) {
+      return { success: false, error: `Failed to insert employee: ${insertError.message}` };
+    }
+
+    // Log to audit logs
+    await supabase.from("audit_logs").insert({
+      actor_id: profile.id,
+      entity_type: "employees",
+      entity_id: inserted.id,
+      action: `created new employee profile: ${name} (${employeeCode})`,
+      before_json: null,
+      after_json: inserted,
+    });
+
+    revalidatePath("/employees");
+
+    return {
+      success: true,
+      error: null,
+      credentials: {
+        loginId: employeeCode,
+        password: tempPassword,
+        employeeCode,
+      },
+    };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to create employee" };
+  }
+}
+
