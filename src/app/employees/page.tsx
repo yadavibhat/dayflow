@@ -93,11 +93,19 @@ function EmployeeDirectory() {
             <h1 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg gradient-heading font-bold">
               Employee Directory
             </h1>
-            <p className="font-body-md text-secondary mt-2">
+            <p className="font-body-md text-secondary mt-1">
               Manage and view all active team members.
             </p>
           </div>
           <div className="flex items-center gap-space-sm w-full md:w-auto">
+            <button
+              onClick={handleOpenModal}
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow-sm transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+              title="Add New Employee"
+            >
+              <span className="material-symbols-outlined text-sm">add</span>
+              NEW
+            </button>
             <div className="relative w-full md:w-64">
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-secondary text-sm">
                 search
@@ -124,39 +132,37 @@ function EmployeeDirectory() {
               onClick={() => router.push(`/payroll/${emp.id}`)}
               className="glass-card border border-border-light rounded-xl p-space-md flex flex-col items-center text-center hover-lift cursor-pointer group relative"
             >
-              {/* Status Dot mapping */}
-              <div className="relative mb-4">
+              {/* Top-Right Corner Status Indicator per Wireframe */}
+              <div className="absolute top-3 right-3 z-10">
+                {emp.status === "Active" && (
+                  <span className="flex h-3 w-3" title="Present in office">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border border-white"></span>
+                  </span>
+                )}
+                {emp.status === "Away" && (
+                  <span className="inline-block h-3 w-3 rounded-full bg-amber-400 border border-white" title="Absent / Away"></span>
+                )}
+                {emp.status === "On Leave" && (
+                  <span className="w-5 h-5 rounded-full bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center" title="On Leave">
+                    <span className="material-symbols-outlined text-[11px] font-bold">
+                      flight
+                    </span>
+                  </span>
+                )}
+              </div>
+
+              {/* Employee Avatar */}
+              <div className="relative mb-4 mt-2">
                 {emp.avatar ? (
                   <img
                     alt={emp.name}
-                    className="w-20 h-20 rounded-full object-cover border border-border-light"
+                    className="w-20 h-20 rounded-full object-cover border border-border-light shadow-xs"
                     src={emp.avatar}
                   />
                 ) : (
-                  <div className="w-20 h-20 rounded-full bg-surface-container-low flex items-center justify-center border border-border-light text-secondary font-headline-md text-3xl font-bold">
+                  <div className="w-20 h-20 rounded-full bg-surface-container-low flex items-center justify-center border border-border-light text-secondary font-headline-md text-2xl font-bold shadow-xs">
                     {emp.name.split(" ").map((n: string) => n[0]).join("")}
-                  </div>
-                )}
-                {emp.status === "Active" && (
-                  <div
-                    className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-success-text border-2 border-surface-container-lowest pulse-active-ring"
-                    title="Active"
-                  ></div>
-                )}
-                {emp.status === "Away" && (
-                  <div
-                    className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-warning-text border-2 border-surface-container-lowest"
-                    title="Away"
-                  ></div>
-                )}
-                {emp.status === "On Leave" && (
-                  <div
-                    className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-secondary border-2 border-surface-container-lowest flex items-center justify-center"
-                    title="On Leave"
-                  >
-                    <span className="material-symbols-outlined text-[10px] text-white font-bold">
-                      flight
-                    </span>
                   </div>
                 )}
               </div>
@@ -164,8 +170,8 @@ function EmployeeDirectory() {
               <h3 className="font-headline-md text-headline-md text-ink font-bold group-hover:text-primary transition-colors">
                 {emp.name}
               </h3>
-              <p className="font-body-md text-secondary">{emp.role}</p>
-              <div className="flex items-center gap-1.5 mt-1">
+              <p className="font-body-md text-secondary text-xs">{emp.role}</p>
+              <div className="flex items-center gap-1.5 mt-2">
                 <span className="text-[11px] text-secondary font-label-sm uppercase tracking-wider bg-surface-container-low px-2 py-0.5 rounded">
                   {emp.department}
                 </span>
