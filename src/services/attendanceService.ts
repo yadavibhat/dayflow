@@ -1,3 +1,16 @@
+/**
+ * ============================================================================
+ * Dayflow HRMS — Core Attendance & Time-Tracking Domain Service
+ * ============================================================================
+ * 
+ * DOMAIN RESPONSIBILITIES:
+ * - Deterministic daily attendance status calculation (Leave > Half-day > Present > Late > Absent > Weekend).
+ * - Systray live status indicator derivation (🟢 Present, 🟡 Away, ✈️ On Leave).
+ * - Safe punch-in / punch-out execution with duplicate open session prevention.
+ * - Dynamic monthly attendance summary metrics (working days, present, leaves, hours).
+ * - Date boundary normalization and duration math.
+ */
+
 import { AttendanceLog, LeaveRequest } from "@/context/AppContext";
 import { CheckInInput, CheckOutInput, CheckInSchema, CheckOutSchema } from "@/lib/validations/attendance";
 import {
@@ -13,13 +26,8 @@ import {
   endOfMonth,
   eachDayOfInterval,
   isWeekend,
-  isSameMonth,
-  startOfWeek,
-  endOfWeek,
-  eachWeekOfInterval,
   isAfter,
   startOfDay,
-  isValid,
 } from "date-fns";
 
 const STORAGE_KEY_ATTENDANCE = "dayflow_attendance_records";
@@ -41,6 +49,9 @@ export interface DerivedDayStatus {
   extraHours: string;
 }
 
+/**
+ * Retrieves persisted attendance logs from local storage fallback.
+ */
 export function getPersistedAttendanceLogs(): AttendanceLog[] {
   if (typeof window === "undefined") return [];
   try {
@@ -52,6 +63,9 @@ export function getPersistedAttendanceLogs(): AttendanceLog[] {
   }
 }
 
+/**
+ * Persists attendance logs to local storage.
+ */
 export function savePersistedAttendanceLogs(logs: AttendanceLog[]): void {
   if (typeof window === "undefined") return;
   try {
@@ -71,14 +85,20 @@ export function getTodayAttendance(employeeId: string, logs?: AttendanceLog[]): 
 }
 
 /**
- * Reusable, deterministic daily status derivation.
- * Business Rules:
- * 1. Approved Leave overrides attendance -> "Leave".
- * 2. Weekend (Sat/Sun) -> "Weekend".
- * 3. Checked in with work hours < 4.5h -> "Half-day".
- * 4. Checked in after 09:30 AM -> "Late".
- * 5. Checked in with full shift (>= 4.5h) -> "Present".
- * 6. Working day in past/today with no check-in and no leave -> "Absent".
+ * Reusable, deterministic daily status derivation engine.
+ * 
+ * BUSINESS RULES (Strictly Enforced):
+ * 1. Approved Leave overrides attendance -> Returns "Leave".
+ * 2. Weekend (Saturday & Sunday) -> Returns "Weekend" (never marked as Absent).
+ * 3. Checked in with work hours < 4.5h -> Returns "Half-day".
+ * 4. Checked in after 09:30 AM -> Returns "Late".
+ * 5. Checked in with full shift (>= 4.5h) -> Returns "Present".
+ * 6. Working day in past/today with no check-in and no leave -> Returns "Absent".
+ * 
+ * @param dayDate The target calendar date to evaluate
+ * @param record Real attendance log for this date (if any)
+ * @param userLeaves List of approved leave requests for the employee
+ * @returns DerivedDayStatus containing derived status, CSS badge styling, timestamps, and work hours
  */
 export function deriveDailyAttendanceStatus(
   dayDate: Date,
@@ -114,7 +134,7 @@ export function deriveDailyAttendanceStatus(
     };
   }
 
-  // Rule 2: Weekend
+  // Rule 2: Weekend (Sat / Sun)
   if (isWeekendDay) {
     return {
       status: "Weekend",
@@ -193,7 +213,12 @@ export function deriveDailyAttendanceStatus(
 }
 
 /**
- * Derives the live status indicator for the systray / header.
+ * Derives the live status indicator for the persistent header systray.
+ * 
+ * Status Mapping:
+ * - Approved leave covering today -> "plane" dot (On Leave)
+ * - Open or completed check-in for today -> "green" dot (Present)
+ * - No check-in for today -> "yellow" dot (Not Checked In)
  */
 export function deriveEmployeeLiveStatus(
   employeeId: string,
@@ -275,6 +300,7 @@ export function deriveEmployeeLiveStatus(
 
 /**
  * Computes monthly summary metrics dynamically from real records.
+ * NEVER hardcodes counts.
  */
 export function calculateEmployeeAttendanceSummary(
   targetMonth: Date,
@@ -358,6 +384,7 @@ export async function executeCheckIn(
     (log) => log.employeeId === input.employeeId && log.date === today
   );
 
+  // Duplicate Check-In Guard
   if (existingToday) {
     if (existingToday.checkIn !== "--:--" && existingToday.checkOut === "--:--") {
       return {
