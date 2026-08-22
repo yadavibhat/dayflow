@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useApp } from "@/context/AppContext";
 
+import { Logo } from "@/components/Logo";
+
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
   const { currentRole } = useApp();
@@ -45,24 +47,10 @@ export const Sidebar: React.FC = () => {
   return (
     <aside className="hidden lg:flex flex-col h-screen w-64 fixed left-0 top-0 bg-surface-container-low border-r border-border-light p-space-md gap-space-sm z-50">
       {/* Brand Header */}
-      <div className="flex items-center gap-space-sm mb-space-xl p-space-sm">
-        <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-on-primary">
-          <span
-            className="material-symbols-outlined"
-            data-weight="fill"
-            style={{ fontVariationSettings: "'FILL' 1" }}
-          >
-            corporate_fare
-          </span>
-        </div>
-        <div>
-          <h1 className="font-headline-md text-headline-md font-black text-primary leading-none">
-            Dayflow
-          </h1>
-          <p className="font-label-sm text-label-sm text-secondary mt-1 uppercase tracking-wider">
-            HR Management
-          </p>
-        </div>
+      <div className="flex items-center mb-space-xl p-space-sm">
+        <Link href="/" className="flex items-center">
+          <Logo variant="full" size="md" />
+        </Link>
       </div>
 
       {/* Navigation */}

@@ -25,7 +25,7 @@ export default function OverviewPage() {
         {/* Page Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-space-xl gap-space-md">
           <div>
-            <h2 className="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-primary font-bold mb-space-xs">
+            <h2 className="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg gradient-heading font-bold mb-space-xs">
               Overview
             </h2>
             <p className="font-body-md text-body-md text-secondary">
@@ -53,7 +53,7 @@ export default function OverviewPage() {
         {/* Metrics Grid */}
         <section className="grid grid-cols-1 md:grid-cols-3 gap-space-md mb-space-xxl">
           {/* Metric Card 1 */}
-          <div className="bg-surface-container-lowest border border-border-light rounded-xl p-space-lg flex flex-col gap-space-md shadow-sm hover:shadow-md transition-shadow">
+          <div className="glass-card border border-border-light rounded-xl p-space-lg flex flex-col gap-space-md shadow-sm hover-lift">
             <div className="flex justify-between items-start">
               <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider font-bold">
                 Total Employees
@@ -72,7 +72,7 @@ export default function OverviewPage() {
           </div>
 
           {/* Metric Card 2 */}
-          <div className="bg-surface-container-lowest border border-border-light rounded-xl p-space-lg flex flex-col gap-space-md shadow-sm hover:shadow-md transition-shadow">
+          <div className="glass-card border border-border-light rounded-xl p-space-lg flex flex-col gap-space-md shadow-sm hover-lift">
             <div className="flex justify-between items-start">
               <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider font-bold">
                 Active Leave Requests
@@ -91,7 +91,7 @@ export default function OverviewPage() {
           </div>
 
           {/* Metric Card 3 */}
-          <div className="bg-surface-container-lowest border border-border-light rounded-xl p-space-lg flex flex-col gap-space-md shadow-sm hover:shadow-md transition-shadow">
+          <div className="glass-card border border-border-light rounded-xl p-space-lg flex flex-col gap-space-md shadow-sm hover-lift">
             <div className="flex justify-between items-start">
               <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider font-bold">
                 Payroll Status

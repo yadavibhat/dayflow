@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Logo } from "@/components/Logo";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -12,7 +13,6 @@ export default function SignUpPage() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -25,8 +25,8 @@ export default function SignUpPage() {
     }
     setLoading(true);
     setTimeout(() => {
-      router.push("/");
-    }, 800);
+      router.push("/signin");
+    }, 1000);
   };
 
   return (
@@ -36,11 +36,10 @@ export default function SignUpPage() {
         <div className="hidden md:flex md:w-5/12 bg-surface-container-low p-space-xl flex-col justify-between border-r border-border-light relative overflow-hidden shrink-0">
           <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "radial-gradient(#000 1px, transparent 1px)", backgroundSize: "16px 16px" }}></div>
           <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-space-xxl">
-              <span className="material-symbols-outlined text-ink text-3xl" data-weight="fill" style={{ fontVariationSettings: "'FILL' 1" }}>
-                corporate_fare
-              </span>
-              <span className="font-headline-md text-headline-md text-ink font-bold tracking-tight">DAYFLOW</span>
+            <div className="mb-space-xxl">
+              <Link href="/" className="inline-flex">
+                <Logo variant="full" size="md" />
+              </Link>
             </div>
             <h2 className="font-headline-lg text-headline-lg text-ink mb-space-md leading-tight">
               Elevate your HR operations.
