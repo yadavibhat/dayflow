@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { executeCheckIn, executeCheckOut } from "@/services/attendanceService";
 
 export interface SalaryProfile {
   base: number;
@@ -353,41 +354,16 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
     saveState("dayflow_logs", updated);
   };
 
-  const checkIn = (employeeId: string) => {
-    const todayStr = new Date().toISOString().split("T")[0];
-    const isAlreadyCheckedIn = attendance.some(
-      (a) => a.employeeId === employeeId && a.date === todayStr
-    );
-
-    if (isAlreadyCheckedIn) return;
-
+  const checkIn = async (employeeId: string) => {
     const emp = employees.find((e) => e.id === employeeId);
-    if (!emp) return;
+    if (!emp) throw new Error("Employee not found");
 
-    // Check if check in is late (after 9:00 AM)
-    const now = new Date();
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-    const ampm = hours >= 12 ? "PM" : "AM";
-    const displayHours = hours % 12 || 12;
-    const padMin = String(minutes).padStart(2, "0");
-    const checkInTime = `${String(displayHours).padStart(2, "0")}:${padMin} ${ampm}`;
+    const result = await executeCheckIn({ employeeId, workMode: "office" }, emp.name, attendance);
+    if (!result.success || !result.record) {
+      throw new Error(result.error || "Check-in failed");
+    }
 
-    const isLate = hours > 9 || (hours === 9 && minutes > 0);
-
-    const newRecord: AttendanceLog = {
-      id: `att${Date.now()}`,
-      employeeId,
-      employeeName: emp.name,
-      checkIn: checkInTime,
-      checkOut: "--:--",
-      workHours: "--",
-      extraHours: "-",
-      status: isLate ? "Late" : "Present",
-      date: todayStr,
-    };
-
-    const updated = [newRecord, ...attendance];
+    const updated = [result.record, ...attendance.filter((a) => !(a.employeeId === employeeId && a.date === result.record!.date))];
     setAttendance(updated);
     saveState("dayflow_attendance", updated);
 
@@ -398,65 +374,23 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
     setEmployees(updatedEmployees);
     saveState("dayflow_employees", updatedEmployees);
 
-    addAuditLog(`checked in at ${checkInTime}`, emp.name);
+    addAuditLog(`checked in at ${result.record.checkIn}`, emp.name);
   };
 
-  const checkOut = (employeeId: string) => {
-    const todayStr = new Date().toISOString().split("T")[0];
-    const recordIndex = attendance.findIndex(
-      (a) => a.employeeId === employeeId && a.date === todayStr
-    );
-
-    if (recordIndex === -1) return;
-
-    const record = attendance[recordIndex];
-    if (record.checkOut !== "--:--") return;
-
-    const now = new Date();
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-    const ampm = hours >= 12 ? "PM" : "AM";
-    const displayHours = hours % 12 || 12;
-    const padMin = String(minutes).padStart(2, "0");
-    const checkOutTime = `${String(displayHours).padStart(2, "0")}:${padMin} ${ampm}`;
-
-    // Calculate work hours
-    const checkInParts = record.checkIn.split(" ");
-    const timeParts = checkInParts[0].split(":");
-    let inHrs = parseInt(timeParts[0]);
-    const inMins = parseInt(timeParts[1]);
-    const inAmpm = checkInParts[1];
-
-    if (inAmpm === "PM" && inHrs !== 12) inHrs += 12;
-    if (inAmpm === "AM" && inHrs === 12) inHrs = 0;
-
-    const checkInDate = new Date();
-    checkInDate.setHours(inHrs, inMins, 0);
-
-    const diffMs = now.getTime() - checkInDate.getTime();
-    const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-
-    const totalHoursStr = `${diffHrs}h ${diffMins}m`;
-
-    // Extra hours over 8 hours
-    let extraHoursStr = "-";
-    if (diffMs > 8 * 60 * 60 * 1000) {
-      const extraMs = diffMs - 8 * 60 * 60 * 1000;
-      const exHrs = Math.floor(extraMs / (1000 * 60 * 60));
-      const exMins = Math.floor((extraMs % (1000 * 60 * 60)) / (1000 * 60));
-      extraHoursStr = `${exHrs}h ${exMins}m`;
+  const checkOut = async (employeeId: string) => {
+    const emp = employees.find((e) => e.id === employeeId);
+    const result = await executeCheckOut({ employeeId, breakMinutes: 0 }, attendance);
+    if (!result.success || !result.record) {
+      throw new Error(result.error || "Check-out failed");
     }
 
-    const updatedRecord = {
-      ...record,
-      checkOut: checkOutTime,
-      workHours: totalHoursStr,
-      extraHours: extraHoursStr,
-    };
-
-    const updatedAttendance = [...attendance];
-    updatedAttendance[recordIndex] = updatedRecord;
+    const updatedAttendance = attendance.map((log) =>
+      log.id === result.record!.id ? result.record! : log
+    );
+    // If not found in memory, add it
+    if (!updatedAttendance.some((l) => l.id === result.record!.id)) {
+      updatedAttendance.unshift(result.record!);
+    }
     setAttendance(updatedAttendance);
     saveState("dayflow_attendance", updatedAttendance);
 
@@ -467,7 +401,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
     setEmployees(updatedEmployees);
     saveState("dayflow_employees", updatedEmployees);
 
-    addAuditLog(`checked out at ${checkOutTime} (${totalHoursStr} worked)`, record.employeeName);
+    addAuditLog(`checked out at ${result.record.checkOut} (${result.record.workHours} worked)`, emp ? emp.name : result.record.employeeName);
   };
 
   const addEmployee = (employee: Omit<Employee, "id" | "salary"> & { baseSalary: number }) => {

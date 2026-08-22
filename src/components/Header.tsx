@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useApp } from "@/context/AppContext";
 
 import { Logo } from "@/components/Logo";
+import { SystrayCheckInOut } from "@/components/attendance/SystrayCheckInOut";
 
 interface HeaderProps {
   onToggleMobileMenu?: () => void;
@@ -17,21 +18,10 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
     currentUser,
     currentRole,
     setRole,
-    attendance,
-    checkIn,
-    checkOut,
   } = useApp();
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-
-  // Check if checked in today
-  const todayStr = new Date().toISOString().split("T")[0];
-  const todayAttendance = attendance.find(
-    (a) => a.employeeId === currentUser.id && a.date === todayStr
-  );
-  const isCheckedIn = todayAttendance && todayAttendance.checkIn !== "--:--";
-  const isCheckedOut = todayAttendance && todayAttendance.checkOut !== "--:--";
 
   const toggleRole = () => {
     setRole(currentRole === "admin" ? "employee" : "admin");
@@ -82,33 +72,10 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
         </nav>
       </div>
 
-      {/* Action Buttons */}
+      {/* Action Buttons & Systray */}
       <div className="flex items-center gap-space-md">
-        {/* Attendance Controls */}
-        <div className="flex items-center gap-space-sm">
-          <button
-            onClick={() => checkIn(currentUser.id)}
-            disabled={isCheckedIn}
-            className={`hidden md:block px-4 py-2 rounded font-label-md text-label-md transition-all duration-200 ${
-              isCheckedIn
-                ? "bg-surface-container-low text-secondary border border-border-light cursor-not-allowed opacity-60"
-                : "bg-ink text-on-primary hover:opacity-90 active:scale-95"
-            }`}
-          >
-            {isCheckedIn ? "Checked In" : "Check-In"}
-          </button>
-          <button
-            onClick={() => checkOut(currentUser.id)}
-            disabled={!isCheckedIn || isCheckedOut}
-            className={`hidden md:block px-4 py-2 rounded border font-label-md text-label-md transition-all duration-200 ${
-              !isCheckedIn || isCheckedOut
-                ? "bg-surface-container-low text-secondary border-border-light cursor-not-allowed opacity-60"
-                : "bg-surface-container-lowest border-border-light text-secondary hover:bg-surface-container-low hover:text-primary active:scale-95"
-            }`}
-          >
-            {isCheckedOut ? "Checked Out" : "Check-Out"}
-          </button>
-        </div>
+        {/* Persistent Check-In / Check-Out Systray Control */}
+        <SystrayCheckInOut />
 
         {/* Notifications and Help */}
         <div className="flex items-center gap-space-xs text-secondary border-l border-border-light pl-space-sm">
