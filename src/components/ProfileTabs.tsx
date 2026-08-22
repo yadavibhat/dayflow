@@ -10,9 +10,10 @@ interface ProfileTabsProps {
   employee: Employee;
   role: "employee" | "hr" | "admin";
   showSalary: boolean;
+  readOnly?: boolean;
 }
 
-export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
+export function ProfileTabs({ employee, role, showSalary, readOnly = false }: ProfileTabsProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"resume" | "private" | "salary" | "security">(
     "private"
@@ -94,13 +95,47 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
 
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (readOnly) return;
     setFormErrors({});
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    // Client-side role-based schema validation
-    const schema = role === "employee" ? EmployeeSelfEditSchema : EmployeeSchema;
-    const validated = schema.safeParse(formData);
+    // Build a role-scoped payload — only include fields the role is allowed to edit.
+    // This is a client-side guard; the server action re-validates independently.
+    let payload: Record<string, unknown>;
+
+    if (isEmployee) {
+      // Employee role: phone, address, personal email only
+      payload = {
+        phone: formData.phone,
+        address: formData.address,
+        email: formData.email,
+      };
+    } else {
+      // HR/Admin role: personal fields + job fields (no salary, no employeeCode)
+      payload = {
+        name: formData.name,
+        phone: formData.phone,
+        address: formData.address,
+        dob: formData.dob,
+        nationality: formData.nationality,
+        maritalStatus: formData.maritalStatus,
+        email: formData.email,
+        bankName: formData.bankName,
+        accountNo: formData.accountNo,
+        routingNo: formData.routingNo,
+        panTaxId: formData.panTaxId,
+        uan: formData.uan,
+        department: formData.department,
+        role: formData.role,
+        managerId: formData.managerId,
+        doj: formData.doj,
+      };
+    }
+
+    // Client-side Zod validation using the same schema the server will use
+    const schema = isEmployee ? EmployeeSelfEditSchema : EmployeeSchema;
+    const validated = schema.safeParse(payload);
 
     if (!validated.success) {
       const errors: Record<string, string> = {};
@@ -113,7 +148,7 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
     }
 
     setSaving(true);
-    const result = await updateEmployeeProfile(employee.id, formData);
+    const result = await updateEmployeeProfile(employee.id, payload as Partial<Employee>);
     setSaving(false);
 
     if (result.success) {
@@ -127,6 +162,7 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
 
   const handleSalarySave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (readOnly) return;
     if (!isSalaryValid) {
       setErrorMsg("The sum of components exceeds the base wage.");
       return;
@@ -151,9 +187,9 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
 
   // Permission checks
   const isEmployee = role === "employee";
-  const canEditPersonal = isEditing; // email, phone, address, photo/avatar
-  const canEditJob = isEditing && !isEmployee; // designation, department, manager, joining date
-  const canEditHRFields = isEditing && !isEmployee; // Name, DOB, Nationality, Marital status, Bank details, PAN, UAN
+  const canEditPersonal = isEditing && !readOnly; // email, phone, address, photo/avatar
+  const canEditJob = isEditing && !isEmployee && !readOnly; // designation, department, manager, joining date
+  const canEditHRFields = isEditing && !isEmployee && !readOnly; // Name, DOB, Nationality, Marital status, Bank details, PAN, UAN
 
   return (
     <div className="w-full">
@@ -223,20 +259,119 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
 
       {/* TAB CONTENT: Resume */}
       {activeTab === "resume" && (
-        <div className="bg-surface-container-lowest border border-border-light rounded-xl p-space-lg md:p-space-xl text-center py-20 shadow-sm">
-          <span className="material-symbols-outlined text-secondary text-5xl mb-4 opacity-60">
-            description
-          </span>
-          <h3 className="font-headline-md text-primary font-bold mb-2">Resume &amp; CV</h3>
-          <p className="text-secondary max-w-sm mx-auto mb-6">
-            View or replace your employment resume attachments on file.
-          </p>
-          <button
-            onClick={() => alert("Resume download started...")}
-            className="bg-ink text-on-primary font-label-md text-label-md px-6 py-2.5 rounded hover:bg-primary transition-colors cursor-pointer font-bold"
-          >
-            Download CV_Employee.pdf
-          </button>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-space-lg">
+          {/* Left Column — About & Interests */}
+          <div className="lg:col-span-2 flex flex-col gap-space-lg">
+            {/* About Me */}
+            <section className="bg-surface-container-lowest border border-border-light rounded-xl p-space-lg md:p-space-xl shadow-sm">
+              <div className="flex items-center gap-2 mb-space-lg border-b border-border-light pb-space-sm">
+                <span className="material-symbols-outlined text-secondary text-xl">person</span>
+                <h2 className="font-headline-md text-headline-md text-primary font-bold">
+                  About Me
+                </h2>
+              </div>
+              {/* "about" column does not exist in the employee schema yet */}
+              <div className="flex flex-col items-center py-8 text-center">
+                <span className="material-symbols-outlined text-secondary text-4xl mb-3 opacity-40">
+                  edit_note
+                </span>
+                <p className="text-secondary font-body-md max-w-sm">
+                  No bio has been added yet. Once the &quot;about&quot; field is available in the
+                  employee record, your summary will appear here.
+                </p>
+              </div>
+            </section>
+
+            {/* Interests */}
+            <section className="bg-surface-container-lowest border border-border-light rounded-xl p-space-lg md:p-space-xl shadow-sm">
+              <div className="flex items-center gap-2 mb-space-lg border-b border-border-light pb-space-sm">
+                <span className="material-symbols-outlined text-secondary text-xl">interests</span>
+                <h2 className="font-headline-md text-headline-md text-primary font-bold">
+                  Interests
+                </h2>
+              </div>
+              {/* "interests" column does not exist in the employee schema yet */}
+              <div className="flex flex-col items-center py-6 text-center">
+                <span className="material-symbols-outlined text-secondary text-4xl mb-3 opacity-40">
+                  sentiment_satisfied
+                </span>
+                <p className="text-secondary font-body-md max-w-sm">
+                  No interests have been added yet. This section will populate once the field
+                  is supported in your employee profile.
+                </p>
+              </div>
+            </section>
+
+            {/* Skills */}
+            <section className="bg-surface-container-lowest border border-border-light rounded-xl p-space-lg md:p-space-xl shadow-sm">
+              <div className="flex items-center gap-2 mb-space-lg border-b border-border-light pb-space-sm">
+                <span className="material-symbols-outlined text-secondary text-xl">psychology</span>
+                <h2 className="font-headline-md text-headline-md text-primary font-bold">
+                  Skills
+                </h2>
+              </div>
+              {/* "skills" column does not exist in the employee schema yet */}
+              <div className="flex flex-col items-center py-6 text-center">
+                <span className="material-symbols-outlined text-secondary text-4xl mb-3 opacity-40">
+                  build
+                </span>
+                <p className="text-secondary font-body-md max-w-sm">
+                  No skills have been listed yet. Once the &quot;skills&quot; field is added
+                  to the employee schema, your competencies will display as tags here.
+                </p>
+              </div>
+            </section>
+          </div>
+
+          {/* Right Column — Certifications & Quick Info */}
+          <div className="flex flex-col gap-space-lg">
+            {/* Certifications */}
+            <section className="bg-surface-container-lowest border border-border-light rounded-xl p-space-lg md:p-space-xl shadow-sm">
+              <div className="flex items-center gap-2 mb-space-lg border-b border-border-light pb-space-sm">
+                <span className="material-symbols-outlined text-secondary text-xl">workspace_premium</span>
+                <h2 className="font-headline-md text-headline-md text-primary font-bold">
+                  Certifications
+                </h2>
+              </div>
+              {/* "certifications" column does not exist in the employee schema yet */}
+              <div className="flex flex-col items-center py-6 text-center">
+                <span className="material-symbols-outlined text-secondary text-4xl mb-3 opacity-40">
+                  military_tech
+                </span>
+                <p className="text-secondary font-body-md">
+                  No certifications on file yet.
+                </p>
+              </div>
+            </section>
+
+            {/* Quick employee info card (real data) */}
+            <section className="bg-surface-container-lowest border border-border-light rounded-xl p-space-lg md:p-space-xl shadow-sm">
+              <div className="flex items-center gap-2 mb-space-lg border-b border-border-light pb-space-sm">
+                <span className="material-symbols-outlined text-secondary text-xl">badge</span>
+                <h2 className="font-headline-md text-headline-md text-primary font-bold">
+                  Quick Info
+                </h2>
+              </div>
+              <div className="flex flex-col gap-space-md">
+                <div>
+                  <span className="font-label-sm text-label-sm text-secondary block mb-0.5 font-bold">Department</span>
+                  <p className="font-body-md text-on-surface font-medium">{employee.department || "Not provided"}</p>
+                </div>
+                <div>
+                  <span className="font-label-sm text-label-sm text-secondary block mb-0.5 font-bold">Designation</span>
+                  <p className="font-body-md text-on-surface font-medium">{employee.role || "Not provided"}</p>
+                </div>
+                <div>
+                  <span className="font-label-sm text-label-sm text-secondary block mb-0.5 font-bold">Date of Joining</span>
+                  <p className="font-body-md text-on-surface font-medium">{employee.doj || "Not provided"}</p>
+                </div>
+                <div>
+                  <span className="font-label-sm text-label-sm text-secondary block mb-0.5 font-bold">Employee Code</span>
+                  <p className="font-body-md text-on-surface font-mono font-medium">{employee.employeeCode || "Not provided"}</p>
+                </div>
+              </div>
+            </section>
+          </div>
         </div>
       )}
 
@@ -255,7 +390,7 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
                       Personal Details
                     </h2>
                   </div>
-                  {!isEditing && (
+                  {!isEditing && !readOnly && (
                     <button
                       type="button"
                       onClick={() => {
@@ -912,15 +1047,17 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
               </div>
             )}
 
-            <div className="pt-2 flex justify-end">
-              <button
-                type="submit"
-                disabled={saving || !isSalaryValid}
-                className="bg-ink text-on-primary font-label-md text-label-md px-6 py-2.5 rounded hover:bg-primary transition-colors cursor-pointer font-bold disabled:opacity-50 shadow-sm"
-              >
-                {saving ? "Saving..." : "Save Salary Config"}
-              </button>
-            </div>
+            {!readOnly && (
+              <div className="pt-2 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={saving || !isSalaryValid}
+                  className="bg-ink text-on-primary font-label-md text-label-md px-6 py-2.5 rounded hover:bg-primary transition-colors cursor-pointer font-bold disabled:opacity-50 shadow-sm"
+                >
+                  {saving ? "Saving..." : "Save Salary Config"}
+                </button>
+              </div>
+            )}
           </section>
         </form>
       )}
@@ -934,48 +1071,54 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
               Security Settings
             </h2>
           </div>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              alert("Password update requested via Supabase Auth!");
-            }}
-            className="space-y-space-md"
-          >
-            <div>
-              <label className="block font-label-md text-label-md text-ink mb-1 font-bold">
-                Current Password
-              </label>
-              <input
-                type="password"
-                required
-                value={securityData.currentPassword}
-                onChange={(e) => setSecurityData({ ...securityData, currentPassword: e.target.value })}
-                className="w-full bg-surface-container-lowest border border-border-light rounded px-3 py-2 font-body-md text-ink focus:border-ink"
-                placeholder="••••••••"
-              />
-            </div>
-            <div>
-              <label className="block font-label-md text-label-md text-ink mb-1 font-bold">
-                New Password
-              </label>
-              <input
-                type="password"
-                required
-                value={securityData.newPassword}
-                onChange={(e) => setSecurityData({ ...securityData, newPassword: e.target.value })}
-                className="w-full bg-surface-container-lowest border border-border-light rounded px-3 py-2 font-body-md text-ink focus:border-ink"
-                placeholder="••••••••"
-              />
-            </div>
-            <div className="pt-2">
-              <button
-                type="submit"
-                className="bg-ink text-on-primary font-label-md text-label-md px-6 py-2.5 rounded hover:bg-primary transition-colors font-bold cursor-pointer shadow-sm"
-              >
-                Change Password
-              </button>
-            </div>
-          </form>
+          {readOnly ? (
+            <p className="text-secondary font-body-md">
+              Security settings are read-only when viewing other employee records.
+            </p>
+          ) : (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                alert("Password update requested via Supabase Auth!");
+              }}
+              className="space-y-space-md"
+            >
+              <div>
+                <label className="block font-label-md text-label-md text-ink mb-1 font-bold">
+                  Current Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={securityData.currentPassword}
+                  onChange={(e) => setSecurityData({ ...securityData, currentPassword: e.target.value })}
+                  className="w-full bg-surface-container-lowest border border-border-light rounded px-3 py-2 font-body-md text-ink focus:border-ink"
+                  placeholder="••••••••"
+                />
+              </div>
+              <div>
+                <label className="block font-label-md text-label-md text-ink mb-1 font-bold">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={securityData.newPassword}
+                  onChange={(e) => setSecurityData({ ...securityData, newPassword: e.target.value })}
+                  className="w-full bg-surface-container-lowest border border-border-light rounded px-3 py-2 font-body-md text-ink focus:border-ink"
+                  placeholder="••••••••"
+                />
+              </div>
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  className="bg-ink text-on-primary font-label-md text-label-md px-6 py-2.5 rounded hover:bg-primary transition-colors font-bold cursor-pointer shadow-sm"
+                >
+                  Change Password
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       )}
     </div>

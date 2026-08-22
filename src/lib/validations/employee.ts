@@ -27,6 +27,18 @@ export const EmployeeSchema = z.object({
   // Job-specific fields (HR/Admin only)
   department: z.enum(["Design", "Engineering", "Marketing", "Finance", "HR"]).optional(),
   role: z.string().min(2, "Designation must be at least 2 characters").optional(),
-  manager_id: z.string().or(z.literal("")).optional().nullable(),
+  managerId: z.string().or(z.literal("")).optional().nullable(),
   doj: z.string().min(1, "Date of joining is required").optional(),
+}).strict();
+
+// 3. Schema for creating a new employee profile (HR/Admin)
+export const EmployeeCreateSchema = z.object({
+  name: z.string().min(2, "Full name is required and must be at least 2 characters"),
+  phone: z.string().min(5, "Phone number must be at least 5 characters"),
+  department: z.enum(["Design", "Engineering", "Marketing", "Finance", "HR"]),
+  role: z.string().min(2, "Designation is required and must be at least 2 characters"),
+  doj: z.string().min(1, "Date of joining is required"),
+  managerId: z.string().or(z.literal("")).optional().nullable(),
+  address: z.string().min(5, "Address must be at least 5 characters"),
+  email: z.string().email("Invalid email format"),
 }).strict();
