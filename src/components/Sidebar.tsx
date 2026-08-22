@@ -7,9 +7,15 @@ import { useApp } from "@/context/AppContext";
 
 import { Logo } from "@/components/Logo";
 
+import { performLogout } from "@/lib/authLogout";
+
 export const Sidebar: React.FC = () => {
   const pathname = usePathname();
   const { currentRole } = useApp();
+
+  const handleLogout = async () => {
+    await performLogout();
+  };
 
   const navItems = [
     {
@@ -101,16 +107,14 @@ export const Sidebar: React.FC = () => {
           <span className="material-symbols-outlined">person</span>
           <span className="text-label-md font-label-md">My Profile</span>
         </Link>
-        <Link
-          href="/signin"
-          onClick={() => {
-            // Optional: reset logic
-          }}
-          className="flex items-center gap-space-sm p-space-sm text-secondary hover:bg-surface-container-high hover:text-primary rounded-xl transition-all duration-200 font-medium"
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex items-center gap-space-sm p-space-sm text-secondary hover:bg-danger-soft hover:text-danger-text rounded-xl transition-all duration-200 font-medium cursor-pointer w-full text-left"
         >
           <span className="material-symbols-outlined">logout</span>
           <span className="text-label-md font-label-md">Log Out</span>
-        </Link>
+        </button>
       </div>
     </aside>
   );

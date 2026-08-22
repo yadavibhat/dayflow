@@ -8,6 +8,8 @@ import { useCheckInStatus } from "@/hooks/useDashboardStats";
 
 import { Logo } from "@/components/Logo";
 import { SystrayCheckInOut } from "@/components/attendance/SystrayCheckInOut";
+import { supabase } from "@/lib/supabase/client";
+import { performLogout } from "@/lib/authLogout";
 
 interface HeaderProps {
   onToggleMobileMenu?: () => void;
@@ -30,6 +32,11 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
   const toggleRole = () => {
     setRole(currentRole === "admin" ? "employee" : "admin");
     setShowProfileMenu(false);
+  };
+
+  const handleLogout = async () => {
+    setShowProfileMenu(false);
+    await performLogout();
   };
 
   const navItems = [
@@ -208,14 +215,14 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
                   <span className="material-symbols-outlined text-secondary text-lg">person</span>
                   My Profile
                 </Link>
-                <Link
-                  href="/signin"
-                  onClick={() => setShowProfileMenu(false)}
-                  className="w-full text-left px-space-md py-3 text-body-md text-danger-text hover:bg-danger-soft transition-colors flex items-center gap-2"
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="w-full text-left px-space-md py-3 text-body-md text-danger-text hover:bg-danger-soft transition-colors flex items-center gap-2 cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-lg">logout</span>
                   Log Out
-                </Link>
+                </button>
               </div>
             </div>
           )}

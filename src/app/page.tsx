@@ -1,6 +1,13 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 
-export default function IndexPage() {
-  // Automatically redirect the index root path "/" to "/signin"
-  redirect("/signin");
+export default async function IndexPage() {
+  const cookieStore = await cookies();
+  const hasSession = Boolean(cookieStore.get("dayflow_session")?.value);
+
+  if (hasSession) {
+    redirect("/employees");
+  } else {
+    redirect("/signin");
+  }
 }

@@ -56,7 +56,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Public paths that never need auth
-  const publicPaths = ["/signin", "/signup"];
+  const publicPaths = ["/signin", "/signup", "/api/auth"];
   const isPublic =
     publicPaths.some((p) => pathname.startsWith(p)) ||
     pathname.startsWith("/_next") ||
@@ -66,13 +66,6 @@ export async function middleware(request: NextRequest) {
     const signInUrl = request.nextUrl.clone();
     signInUrl.pathname = "/signin";
     return NextResponse.redirect(signInUrl);
-  }
-
-  // Redirect already-authenticated users away from sign-in
-  if ((user || hasSessionCookie) && (pathname === "/signin" || pathname === "/signup")) {
-    const employeesUrl = request.nextUrl.clone();
-    employeesUrl.pathname = "/employees";
-    return NextResponse.redirect(employeesUrl);
   }
 
   return response;

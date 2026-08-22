@@ -17,7 +17,6 @@ export default function SignInPage() {
     setLoading(true);
 
     try {
-      // Attempt Supabase authentication if credentials provided
       if (email && password) {
         await supabase.auth.signInWithPassword({ email, password }).catch(() => null);
       }
@@ -25,11 +24,26 @@ export default function SignInPage() {
       // Ignore fallback errors for local dev mode
     }
 
-    // Set local session cookie so middleware grants immediate access to /employees
+    // Set local session cookie
     document.cookie = "dayflow_session=active; path=/; max-age=86400; SameSite=Lax";
+    localStorage.setItem("dayflow_authenticated", "true");
 
-    // Navigate to Employee Directory
-    router.push("/employees");
+    // Full navigation to ensure server components & middleware load fresh session
+    window.location.href = "/employees";
+  };
+
+  const handleQuickLogin = (role: "admin" | "employee") => {
+    setLoading(true);
+    document.cookie = "dayflow_session=active; path=/; max-age=86400; SameSite=Lax";
+    localStorage.setItem("dayflow_authenticated", "true");
+    if (role === "admin") {
+      setEmail("mahi.soni@dayflow.in");
+    } else {
+      setEmail("aarav.sharma@dayflow.in");
+    }
+    setTimeout(() => {
+      window.location.href = "/employees";
+    }, 200);
   };
 
   return (
@@ -111,6 +125,29 @@ export default function SignInPage() {
                 </>
               )}
             </button>
+
+            {/* Quick Demo Access */}
+            <div className="pt-3 border-t border-border-light flex flex-col gap-2">
+              <p className="text-[11px] text-secondary text-center uppercase tracking-wider font-semibold">
+                Quick Demo Access
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin("admin")}
+                  className="px-2 py-1.5 bg-surface-container-low hover:bg-surface-container border border-border-light rounded text-xs font-semibold text-primary transition-colors text-center cursor-pointer"
+                >
+                  Admin Login
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin("employee")}
+                  className="px-2 py-1.5 bg-surface-container-low hover:bg-surface-container border border-border-light rounded text-xs font-semibold text-primary transition-colors text-center cursor-pointer"
+                >
+                  Employee Login
+                </button>
+              </div>
+            </div>
           </form>
         </div>
 
