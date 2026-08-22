@@ -27,6 +27,7 @@
   --color-surface-container-highest: #e2e2e2;
   --color-secondary: #505f76;
   --color-primary: #000000;
+  --color-on-primary: #ffffff;
   
   /* Spacing Scale */
   --spacing-space-xs: 4px;
