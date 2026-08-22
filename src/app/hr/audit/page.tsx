@@ -89,14 +89,18 @@ export default function HRAuditPage() {
   const router = useRouter();
   const { auditLogs, leaves, currentRole } = useApp();
 
-  // Role guard
-  if (currentRole !== "admin") {
-    router.replace("/dashboard");
-    return null;
-  }
+  React.useEffect(() => {
+    if (currentRole !== "admin") {
+      router.replace("/dashboard");
+    }
+  }, [currentRole, router]);
 
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>("ALL");
+
+  if (currentRole !== "admin") {
+    return null;
+  }
 
   const pendingLeaveCount = leaves.filter((l) => l.status === "Pending").length;
 

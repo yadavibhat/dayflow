@@ -82,13 +82,17 @@ export default function PayrollManagementPage() {
   const { id } = useParams<{ id: string }>();
   const { employees, currentRole, updateSalaryProfile, addAuditLog } = useApp();
 
-  // Role guard — employees cannot edit payroll
-  if (currentRole !== "admin") {
-    router.replace("/payroll");
-    return null;
-  }
+  React.useEffect(() => {
+    if (currentRole !== "admin") {
+      router.replace("/payroll");
+    }
+  }, [currentRole, router]);
 
   const employee = employees.find((e) => e.id === id);
+
+  if (currentRole !== "admin") {
+    return null;
+  }
 
   // ── form state ──
   const [base, setBase] = useState("");

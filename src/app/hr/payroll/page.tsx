@@ -352,14 +352,18 @@ export default function HRPayrollPage() {
   const router = useRouter();
   const { employees, currentRole } = useApp();
 
-  // Guard: employees cannot access this page
-  if (currentRole !== "admin") {
-    router.replace("/payroll");
-    return null;
-  }
+  React.useEffect(() => {
+    if (currentRole !== "admin") {
+      router.replace("/payroll");
+    }
+  }, [currentRole, router]);
 
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  if (currentRole !== "admin") {
+    return null;
+  }
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();

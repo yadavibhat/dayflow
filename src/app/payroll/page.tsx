@@ -91,9 +91,13 @@ export default function EmployeePayrollPage() {
   const router = useRouter();
   const { currentUser, currentRole } = useApp();
 
-  // Admin always goes to HR payroll management
+  React.useEffect(() => {
+    if (currentRole === "admin") {
+      router.replace("/hr/payroll");
+    }
+  }, [currentRole, router]);
+
   if (currentRole === "admin") {
-    router.replace("/hr/payroll");
     return null;
   }
 
