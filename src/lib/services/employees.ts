@@ -109,9 +109,38 @@ export async function updateEmployeeProfile(employeeId: string, updates: Partial
       return { success: false, error: "Access Denied: You can only edit your own details" };
     }
 
-    // Validate the input using Zod based on role permissions
+    // Server-side field allowlists — never trust the client payload shape.
+    // These mirror the Zod schemas but act as an explicit pre-filter.
+    const EMPLOYEE_ALLOWED_FIELDS = new Set(["phone", "address", "email", "avatar"]);
+    const HR_ALLOWED_FIELDS = new Set([
+      "name", "phone", "address", "email", "avatar",
+      "dob", "nationality", "maritalStatus",
+      "bankName", "accountNo", "routingNo", "panTaxId", "uan",
+      "department", "role", "managerId", "doj",
+    ]);
+
+    const allowedFields = profile.role === "employee" ? EMPLOYEE_ALLOWED_FIELDS : HR_ALLOWED_FIELDS;
+
+    // Detect and reject disallowed fields with a clear error
+    const disallowedKeys = Object.keys(updates).filter(key => !allowedFields.has(key));
+    if (disallowedKeys.length > 0) {
+      return {
+        success: false,
+        error: `Permission Denied: Your role (${profile.role}) cannot modify: ${disallowedKeys.join(", ")}`,
+      };
+    }
+
+    // Strip to allowed fields only (defense-in-depth, disallowed already rejected above)
+    const scrubbedUpdates: Record<string, unknown> = {};
+    for (const key of Object.keys(updates)) {
+      if (allowedFields.has(key)) {
+        scrubbedUpdates[key] = (updates as Record<string, unknown>)[key];
+      }
+    }
+
+    // Validate the scrubbed input using Zod based on role permissions
     const schema = profile.role === "employee" ? EmployeeSelfEditSchema : EmployeeSchema;
-    const validatedFields = schema.safeParse(updates);
+    const validatedFields = schema.safeParse(scrubbedUpdates);
     if (!validatedFields.success) {
       const errorMsg = validatedFields.error.issues.map(issue => `${issue.path.join(".")}: ${issue.message}`).join(", ");
       return { success: false, error: `Validation Error: ${errorMsg}` };

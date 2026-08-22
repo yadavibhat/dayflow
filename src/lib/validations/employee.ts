@@ -27,6 +27,6 @@ export const EmployeeSchema = z.object({
   // Job-specific fields (HR/Admin only)
   department: z.enum(["Design", "Engineering", "Marketing", "Finance", "HR"]).optional(),
   role: z.string().min(2, "Designation must be at least 2 characters").optional(),
-  manager_id: z.string().or(z.literal("")).optional().nullable(),
+  managerId: z.string().or(z.literal("")).optional().nullable(),
   doj: z.string().min(1, "Date of joining is required").optional(),
 }).strict();
