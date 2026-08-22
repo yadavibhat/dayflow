@@ -16,7 +16,7 @@ function EmployeeDirectory() {
   // Form State
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
-  const [department, setDepartment] = useState("Engineering");
+  const [department, setDepartment] = useState<"Design" | "Engineering" | "Marketing" | "Finance" | "HR">("Engineering");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [baseSalary, setBaseSalary] = useState("70000");
@@ -134,7 +134,7 @@ function EmployeeDirectory() {
                   />
                 ) : (
                   <div className="w-20 h-20 rounded-full bg-surface-container-low flex items-center justify-center border border-border-light text-secondary font-headline-md text-3xl font-bold">
-                    {emp.name.split(" ").map(n => n[0]).join("")}
+                    {emp.name.split(" ").map((n: string) => n[0]).join("")}
                   </div>
                 )}
                 {emp.status === "Active" && (
@@ -261,7 +261,7 @@ function EmployeeDirectory() {
                     <select
                       className="w-full bg-surface-container-lowest border border-border-light rounded px-3 py-2 font-body-md text-ink focus:border-ink"
                       value={department}
-                      onChange={(e) => setDepartment(e.target.value)}
+                      onChange={(e) => setDepartment(e.target.value as any)}
                     >
                       <option value="Design">Design</option>
                       <option value="Engineering">Engineering</option>
