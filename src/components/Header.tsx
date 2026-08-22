@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useApp } from "@/context/AppContext";
 
+import { Logo } from "@/components/Logo";
+
 interface HeaderProps {
   onToggleMobileMenu?: () => void;
 }
@@ -54,8 +56,10 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
           <span className="material-symbols-outlined text-2xl">menu</span>
         </button>
 
-        <div className="text-headline-md font-headline-md font-bold text-primary block lg:hidden">
-          <Link href="/">Dayflow</Link>
+        <div className="block lg:hidden">
+          <Link href="/" className="flex items-center">
+            <Logo variant="full" size="sm" />
+          </Link>
         </div>
 
         <nav className="hidden lg:flex items-center gap-space-lg h-full pt-1">
