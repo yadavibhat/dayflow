@@ -21,6 +21,7 @@ function EmployeeDirectory() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [baseSalary, setBaseSalary] = useState("1200000");
+  const [avatar, setAvatar] = useState<string>("");
 
   // Open modal if URL query specifies it
   useEffect(() => {
@@ -35,8 +36,27 @@ function EmployeeDirectory() {
 
   const handleCloseModal = () => {
     setModalOpen(false);
+    setAvatar("");
     // Clear ?add=true from URL
     router.replace("/employees");
+  };
+
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      alert("File size exceeds 2MB limit. Please choose a smaller photo.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (uploadEvent) => {
+      setAvatar(uploadEvent.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveAvatar = () => {
+    setAvatar("");
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -48,11 +68,11 @@ function EmployeeDirectory() {
       role,
       department,
       status: "Active",
-      avatar: "", // default empty fallback avatar icon will render
+      avatar: avatar || "",
       email,
       phone,
       dob: "Not specified",
-      nationality: "Not specified",
+      nationality: "Indian",
       maritalStatus: "Single",
       address: "Not specified",
       doj: new Date().toLocaleDateString("en-US", {
@@ -65,7 +85,7 @@ function EmployeeDirectory() {
       routingNo: "Not specified",
       panTaxId: "Not specified",
       uan: "Not specified",
-      baseSalary: parseFloat(baseSalary) || 50000,
+      baseSalary: parseFloat(baseSalary) || 1200000,
     });
 
     // Reset Form
@@ -74,7 +94,8 @@ function EmployeeDirectory() {
     setDepartment("Engineering");
     setEmail("");
     setPhone("");
-    setBaseSalary("70000");
+    setBaseSalary("1200000");
+    setAvatar("");
     handleCloseModal();
   };
 
@@ -252,6 +273,53 @@ function EmployeeDirectory() {
 
               {/* Modal Body / Form */}
               <form onSubmit={handleSubmit} className="p-space-lg space-y-space-md overflow-y-auto">
+                {/* Profile Picture Upload & Remove Section */}
+                <div className="flex items-center gap-4 p-3 bg-slate-50 border border-border-light rounded-xl">
+                  <div className="relative">
+                    {avatar ? (
+                      <img
+                        alt="Employee Avatar Preview"
+                        className="w-16 h-16 rounded-full object-cover border-2 border-primary/20 shadow-xs"
+                        src={avatar}
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center border border-border-light text-secondary font-bold text-xl">
+                        {name ? name.split(" ").map((n) => n[0]).join("") : <span className="material-symbols-outlined text-2xl">person</span>}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-1.5">
+                    <label className="block text-xs font-bold text-primary">
+                      Profile Picture (Optional)
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <label className="px-3 py-1.5 bg-surface-container-lowest hover:bg-surface-container-low text-primary border border-border-light rounded-lg text-xs font-semibold cursor-pointer shadow-xs transition-colors inline-flex items-center gap-1">
+                        <span className="material-symbols-outlined text-sm">upload</span>
+                        <span>{avatar ? "Change Photo" : "Upload Photo"}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleAvatarUpload}
+                          className="hidden"
+                        />
+                      </label>
+                      {avatar && (
+                        <button
+                          type="button"
+                          onClick={handleRemoveAvatar}
+                          className="px-2.5 py-1.5 text-rose-600 hover:bg-rose-50 border border-rose-200 rounded-lg text-xs font-semibold cursor-pointer transition-colors inline-flex items-center gap-1"
+                        >
+                          <span className="material-symbols-outlined text-sm">delete</span>
+                          <span>Remove</span>
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-secondary">
+                      PNG, JPG, or GIF up to 2MB.
+                    </p>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block font-label-md text-label-md text-ink mb-1 font-bold">
                     Full Name
