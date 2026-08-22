@@ -366,7 +366,7 @@ export default function HRLeaveApprovalPage() {
         ================================================== */}
         {selectedLeave && (
           <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-            <div className="bg-surface-container-lowest rounded-2xl border border-border-light w-full max-w-lg shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
+            <div className="bg-surface-container-lowest rounded-2xl border border-border-light w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col animate-in fade-in zoom-in-95 duration-150">
               {/* Modal Header */}
               <div className="px-6 py-4 border-b border-border-light flex justify-between items-center bg-slate-surface">
                 <div>
