@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Logo } from "@/components/Logo";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -24,16 +25,13 @@ export default function SignInPage() {
       <main className="w-full max-w-md">
         <div className="bg-surface-container-lowest border border-border-light rounded-xl p-space-xl flex flex-col items-center shadow-sm">
           {/* Logo Branding */}
-          <div className="flex flex-col items-center mb-space-xl">
-            <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center text-on-primary text-4xl font-bold mb-space-md shadow-sm">
-              D
-            </div>
-            <h1 className="font-headline-lg text-headline-lg text-ink text-center tracking-tight uppercase font-black">
-              Dayflow
-            </h1>
-            <h2 className="font-headline-md text-headline-md text-ink text-center tracking-wide mt-unit">
-              HRMS
-            </h2>
+          <div className="flex flex-col items-center mb-space-xl text-center">
+            <Link href="/" className="mb-space-sm">
+              <Logo variant="full" size="lg" />
+            </Link>
+            <p className="font-label-sm text-label-sm text-secondary uppercase tracking-widest font-semibold mt-1">
+              Human Resource Management System
+            </p>
           </div>
 
           {/* Form */}
