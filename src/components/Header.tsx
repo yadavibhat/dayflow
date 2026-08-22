@@ -20,6 +20,8 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
     attendance,
     checkIn,
     checkOut,
+    leaves,
+    auditLogs,
   } = useApp();
 
   const [showNotifications, setShowNotifications] = useState(false);
@@ -113,37 +115,78 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
         {/* Notifications and Help */}
         <div className="flex items-center gap-space-xs text-secondary border-l border-border-light pl-space-sm">
           <div className="relative">
-            <button
-              onClick={() => {
-                setShowNotifications(!showNotifications);
-                setShowProfileMenu(false);
-              }}
-              className={`p-2 hover:bg-surface-container-low rounded-full transition-colors relative ${
-                showNotifications ? "bg-surface-container-low text-primary" : ""
-              }`}
-            >
-              <span className="material-symbols-outlined text-xl">notifications</span>
-              {/* Notification dot */}
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-danger-text rounded-full"></span>
-            </button>
+            {(() => {
+              // Generate dynamic notifications
+              const userNotifications: Array<{ title: string; message: string }> = [];
 
-            {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 bg-surface-container-lowest border border-border-light rounded-xl shadow-xl z-50 p-space-md">
-                <h4 className="font-headline-md text-label-md text-primary font-bold mb-space-sm pb-space-xs border-b border-border-light">
-                  Notifications
-                </h4>
-                <div className="space-y-space-md text-body-md text-secondary">
-                  <div className="border-b border-surface-container-low pb-2">
-                    <p className="text-primary font-medium">Leave approved</p>
-                    <p className="text-[12px] mt-0.5">Your Sick Leave for Oct 10 was approved.</p>
-                  </div>
-                  <div className="pb-1">
-                    <p className="text-primary font-medium">Monthly Payroll</p>
-                    <p className="text-[12px] mt-0.5">Salary stub for Oct 2026 is generated.</p>
-                  </div>
-                </div>
-              </div>
-            )}
+              if (currentRole === "admin") {
+                leaves
+                  .filter((l) => l.status === "Pending")
+                  .forEach((l) => {
+                    userNotifications.push({
+                      title: "Leave Approval Needed",
+                      message: `${l.employeeName} requested ${l.type}.`,
+                    });
+                  });
+                auditLogs.slice(0, 3).forEach((log) => {
+                  userNotifications.push({
+                    title: "System Log",
+                    message: `${log.user} ${log.action}.`,
+                  });
+                });
+              } else {
+                leaves
+                  .filter((l) => l.employeeName === currentUser.name)
+                  .forEach((l) => {
+                    userNotifications.push({
+                      title: `Leave ${l.status}`,
+                      message: `Your ${l.type} request was ${l.status.toLowerCase()}.`,
+                    });
+                  });
+              }
+
+              return (
+                <>
+                  <button
+                    onClick={() => {
+                      setShowNotifications(!showNotifications);
+                      setShowProfileMenu(false);
+                    }}
+                    className={`p-2 hover:bg-surface-container-low rounded-full transition-colors relative ${
+                      showNotifications ? "bg-surface-container-low text-primary" : ""
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-xl">notifications</span>
+                    {/* Notification dot */}
+                    {userNotifications.length > 0 && (
+                      <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-danger-text rounded-full"></span>
+                    )}
+                  </button>
+
+                  {showNotifications && (
+                     <div className="absolute right-0 mt-2 w-80 bg-surface-container-lowest border border-border-light rounded-xl shadow-xl z-50 p-space-md max-h-96 overflow-y-auto">
+                       <h4 className="font-headline-md text-label-md text-primary font-bold mb-space-sm pb-space-xs border-b border-border-light">
+                         Notifications ({userNotifications.length})
+                       </h4>
+                       {userNotifications.length === 0 ? (
+                         <div className="py-space-md text-center text-secondary font-body-md">
+                           No new notifications.
+                         </div>
+                       ) : (
+                         <div className="space-y-space-md text-body-md text-secondary">
+                           {userNotifications.map((notif, idx) => (
+                             <div key={idx} className="border-b border-surface-container-low last:border-0 pb-2 last:pb-0">
+                               <p className="text-primary font-medium text-label-md">{notif.title}</p>
+                               <p className="text-[12px] mt-0.5">{notif.message}</p>
+                             </div>
+                           ))}
+                         </div>
+                       )}
+                     </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
           <button className="p-2 hover:bg-surface-container-low rounded-full transition-colors hidden sm:block">

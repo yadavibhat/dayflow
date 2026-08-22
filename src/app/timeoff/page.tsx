@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useApp } from "@/context/AppContext";
+import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default function TimeOffPage() {
   const { leaves, currentUser, requestLeave, updateLeaveStatus } = useApp();
@@ -76,19 +78,16 @@ export default function TimeOffPage() {
         {/* Bento Grid Layout */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-space-md mb-space-xxl">
           {/* Card 1: Pending Approvals */}
-          <div className="bg-surface-container-lowest border border-border-light rounded-xl p-space-md flex flex-col justify-between shadow-sm">
-            <div>
-              <div className="flex items-center justify-between mb-space-sm">
-                <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider font-bold">
-                  Pending Approvals
-                </span>
-                <span className="material-symbols-outlined text-warning-text">hourglass_empty</span>
-              </div>
-              <div className="font-headline-lg text-headline-lg text-ink font-bold">
-                {pendingApprovals}
-              </div>
+          <Card
+            title="Pending Approvals"
+            action={<span className="material-symbols-outlined text-warning-text">hourglass_empty</span>}
+            glass={false}
+            className="bg-surface-container-lowest border border-border-light shadow-sm"
+          >
+            <div className="font-headline-lg text-headline-lg text-ink font-bold">
+              {pendingApprovals}
             </div>
-            <div className="mt-space-md pt-space-sm border-t border-border-light">
+            <div className="mt-space-md pt-space-sm border-t border-border-light mt-auto">
               <a
                 className="font-label-md text-label-md text-ink hover:underline flex items-center gap-1 font-bold"
                 href="#"
@@ -101,22 +100,19 @@ export default function TimeOffPage() {
                 <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
               </a>
             </div>
-          </div>
+          </Card>
 
           {/* Card 2: Team Away Today */}
-          <div className="bg-surface-container-lowest border border-border-light rounded-xl p-space-md flex flex-col justify-between shadow-sm">
-            <div>
-              <div className="flex items-center justify-between mb-space-sm">
-                <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider font-bold">
-                  Team Away Today
-                </span>
-                <span className="material-symbols-outlined text-ink">group_remove</span>
-              </div>
-              <div className="font-headline-lg text-headline-lg text-ink font-bold">
-                {teamAwayToday}
-              </div>
+          <Card
+            title="Team Away Today"
+            action={<span className="material-symbols-outlined text-ink">group_remove</span>}
+            glass={false}
+            className="bg-surface-container-lowest border border-border-light shadow-sm"
+          >
+            <div className="font-headline-lg text-headline-lg text-ink font-bold">
+              {teamAwayToday}
             </div>
-            <div className="mt-space-md pt-space-sm border-t border-border-light flex gap-2 overflow-hidden items-center">
+            <div className="mt-space-md pt-space-sm border-t border-border-light flex gap-2 overflow-hidden items-center mt-auto">
               {leaves
                 .filter((l) => l.status === "Approved")
                 .slice(0, 3)
@@ -148,23 +144,20 @@ export default function TimeOffPage() {
                 <span className="text-[12px] text-secondary font-medium">All present today</span>
               )}
             </div>
-          </div>
+          </Card>
 
           {/* Card 3: Your PTO Balance */}
-          <div className="bg-surface-container-lowest border border-border-light rounded-xl p-space-md flex flex-col justify-between shadow-sm">
-            <div>
-              <div className="flex items-center justify-between mb-space-sm">
-                <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider font-bold">
-                  Your PTO Balance
-                </span>
-                <span className="material-symbols-outlined text-success-text">event_available</span>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="font-headline-lg text-headline-lg text-ink font-bold">18</span>
-                <span className="font-body-md text-body-md text-secondary">days left</span>
-              </div>
+          <Card
+            title="Your PTO Balance"
+            action={<span className="material-symbols-outlined text-success-text">event_available</span>}
+            glass={false}
+            className="bg-surface-container-lowest border border-border-light shadow-sm"
+          >
+            <div className="flex items-baseline gap-2">
+              <span className="font-headline-lg text-headline-lg text-ink font-bold">18</span>
+              <span className="font-body-md text-body-md text-secondary">days left</span>
             </div>
-            <div className="mt-space-md">
+            <div className="mt-space-md mt-auto">
               <div className="w-full bg-surface-container-low rounded-full h-1.5 mb-1 overflow-hidden">
                 <div className="bg-ink h-1.5 rounded-full" style={{ width: "45%" }}></div>
               </div>
@@ -173,15 +166,13 @@ export default function TimeOffPage() {
                 <span>30 total</span>
               </div>
             </div>
-          </div>
+          </Card>
         </div>
 
         {/* Main Data Table */}
-        <div className="bg-surface-container-lowest border border-border-light rounded-xl overflow-hidden shadow-sm">
-          <div className="p-space-md border-b border-border-light flex flex-col sm:flex-row justify-between items-center gap-space-sm">
-            <h2 className="font-headline-md text-headline-md text-ink font-bold">
-              Recent Leave Requests
-            </h2>
+        <Card
+          title="Recent Leave Requests"
+          action={
             <div className="relative w-full sm:w-64">
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-secondary text-[20px]">
                 search
@@ -194,9 +185,11 @@ export default function TimeOffPage() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-          </div>
-
-          <div className="overflow-x-auto">
+          }
+          glass={false}
+          className="bg-surface-container-lowest border border-border-light shadow-sm p-0 overflow-hidden"
+        >
+          <div className="overflow-x-auto mt-2">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-border-light bg-slate-surface">
@@ -224,7 +217,7 @@ export default function TimeOffPage() {
                 {filteredLeaves.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-10 text-center text-secondary font-body-md">
-                      No leave requests found.
+                      <EmptyState icon="event_busy" title="No leave requests found" />
                     </td>
                   </tr>
                 ) : (
@@ -300,9 +293,9 @@ export default function TimeOffPage() {
                   ))
                 )}
               </tbody>
-              </table>
+            </table>
           </div>
-        </div>
+        </Card>
 
         {/* New Leave Request Modal Dialog */}
         {modalOpen && (
