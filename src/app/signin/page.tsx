@@ -16,7 +16,7 @@ export default function SignInPage() {
     setLoading(true);
     // Simulate login redirecting to dashboard
     setTimeout(() => {
-      router.push("/");
+      router.push("/dashboard");
     }, 800);
   };
 
@@ -26,7 +26,7 @@ export default function SignInPage() {
         <div className="bg-surface-container-lowest border border-border-light rounded-xl p-space-xl flex flex-col items-center shadow-sm">
           {/* Logo Branding */}
           <div className="flex flex-col items-center mb-space-xl text-center">
-            <Link href="/" className="mb-space-sm">
+            <Link href="/dashboard" className="mb-space-sm">
               <Logo variant="full" size="lg" />
             </Link>
             <p className="font-label-sm text-label-sm text-secondary uppercase tracking-widest font-semibold mt-1">
