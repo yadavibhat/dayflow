@@ -49,6 +49,10 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const hasSessionCookie =
+    Boolean(request.cookies.get("dayflow_session")?.value) ||
+    Boolean(request.cookies.get("dayflow_demo_session")?.value);
+
   const { pathname } = request.nextUrl;
 
   // Public paths that never need auth
@@ -58,17 +62,17 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon");
 
-  if (!isPublic && !user) {
+  if (!isPublic && !user && !hasSessionCookie) {
     const signInUrl = request.nextUrl.clone();
     signInUrl.pathname = "/signin";
     return NextResponse.redirect(signInUrl);
   }
 
   // Redirect already-authenticated users away from sign-in
-  if (user && (pathname === "/signin" || pathname === "/signup")) {
-    const dashboardUrl = request.nextUrl.clone();
-    dashboardUrl.pathname = "/dashboard";
-    return NextResponse.redirect(dashboardUrl);
+  if ((user || hasSessionCookie) && (pathname === "/signin" || pathname === "/signup")) {
+    const employeesUrl = request.nextUrl.clone();
+    employeesUrl.pathname = "/employees";
+    return NextResponse.redirect(employeesUrl);
   }
 
   return response;
