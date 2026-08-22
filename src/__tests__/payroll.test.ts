@@ -105,4 +105,31 @@ describe("Payroll Domain & Calculations Suite", () => {
     // Net payable = 100,000 - 16,200 = 83,800
     assert.equal(payslip.netPayable, 83800);
   });
+
+  it("should calculate correct net pay for the worked example (Wage 50000, Basic 50%, HRA 50%, PF 12%, PT 200 -> net_pay 46800)", () => {
+    const { calculateSalary } = require("../lib/payroll/calculations");
+    const result = calculateSalary({
+      wage: 50000,
+      workingDaysPerWeek: 5,
+      breakTimeMinutes: 60,
+      basicPct: 50,
+      hraPct: 50,
+      standardAllowancePct: 0,
+      performanceBonusPct: 0,
+      ltaPct: 0,
+      fixedAllowancePct: 25,
+      employeePfPct: 12,
+      employerPfPct: 12,
+      professionalTax: 200,
+    });
+
+    assert.equal(result.basic, 25000);
+    assert.equal(result.hra, 12500);
+    assert.equal(result.fixedAllowance, 12500);
+    assert.equal(result.employeePf, 3000);
+    assert.equal(result.professionalTax, 200);
+    assert.equal(result.allowancesTotal, 25000);
+    assert.equal(result.deductionsTotal, 3200);
+    assert.equal(result.netPay, 46800);
+  });
 });
