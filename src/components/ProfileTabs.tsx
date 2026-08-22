@@ -223,20 +223,119 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
 
       {/* TAB CONTENT: Resume */}
       {activeTab === "resume" && (
-        <div className="bg-surface-container-lowest border border-border-light rounded-xl p-space-lg md:p-space-xl text-center py-20 shadow-sm">
-          <span className="material-symbols-outlined text-secondary text-5xl mb-4 opacity-60">
-            description
-          </span>
-          <h3 className="font-headline-md text-primary font-bold mb-2">Resume &amp; CV</h3>
-          <p className="text-secondary max-w-sm mx-auto mb-6">
-            View or replace your employment resume attachments on file.
-          </p>
-          <button
-            onClick={() => alert("Resume download started...")}
-            className="bg-ink text-on-primary font-label-md text-label-md px-6 py-2.5 rounded hover:bg-primary transition-colors cursor-pointer font-bold"
-          >
-            Download CV_Employee.pdf
-          </button>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-space-lg">
+          {/* Left Column — About & Interests */}
+          <div className="lg:col-span-2 flex flex-col gap-space-lg">
+            {/* About Me */}
+            <section className="bg-surface-container-lowest border border-border-light rounded-xl p-space-lg md:p-space-xl shadow-sm">
+              <div className="flex items-center gap-2 mb-space-lg border-b border-border-light pb-space-sm">
+                <span className="material-symbols-outlined text-secondary text-xl">person</span>
+                <h2 className="font-headline-md text-headline-md text-primary font-bold">
+                  About Me
+                </h2>
+              </div>
+              {/* "about" column does not exist in the employee schema yet */}
+              <div className="flex flex-col items-center py-8 text-center">
+                <span className="material-symbols-outlined text-secondary text-4xl mb-3 opacity-40">
+                  edit_note
+                </span>
+                <p className="text-secondary font-body-md max-w-sm">
+                  No bio has been added yet. Once the &quot;about&quot; field is available in the
+                  employee record, your summary will appear here.
+                </p>
+              </div>
+            </section>
+
+            {/* Interests */}
+            <section className="bg-surface-container-lowest border border-border-light rounded-xl p-space-lg md:p-space-xl shadow-sm">
+              <div className="flex items-center gap-2 mb-space-lg border-b border-border-light pb-space-sm">
+                <span className="material-symbols-outlined text-secondary text-xl">interests</span>
+                <h2 className="font-headline-md text-headline-md text-primary font-bold">
+                  Interests
+                </h2>
+              </div>
+              {/* "interests" column does not exist in the employee schema yet */}
+              <div className="flex flex-col items-center py-6 text-center">
+                <span className="material-symbols-outlined text-secondary text-4xl mb-3 opacity-40">
+                  sentiment_satisfied
+                </span>
+                <p className="text-secondary font-body-md max-w-sm">
+                  No interests have been added yet. This section will populate once the field
+                  is supported in your employee profile.
+                </p>
+              </div>
+            </section>
+
+            {/* Skills */}
+            <section className="bg-surface-container-lowest border border-border-light rounded-xl p-space-lg md:p-space-xl shadow-sm">
+              <div className="flex items-center gap-2 mb-space-lg border-b border-border-light pb-space-sm">
+                <span className="material-symbols-outlined text-secondary text-xl">psychology</span>
+                <h2 className="font-headline-md text-headline-md text-primary font-bold">
+                  Skills
+                </h2>
+              </div>
+              {/* "skills" column does not exist in the employee schema yet */}
+              <div className="flex flex-col items-center py-6 text-center">
+                <span className="material-symbols-outlined text-secondary text-4xl mb-3 opacity-40">
+                  build
+                </span>
+                <p className="text-secondary font-body-md max-w-sm">
+                  No skills have been listed yet. Once the &quot;skills&quot; field is added
+                  to the employee schema, your competencies will display as tags here.
+                </p>
+              </div>
+            </section>
+          </div>
+
+          {/* Right Column — Certifications & Quick Info */}
+          <div className="flex flex-col gap-space-lg">
+            {/* Certifications */}
+            <section className="bg-surface-container-lowest border border-border-light rounded-xl p-space-lg md:p-space-xl shadow-sm">
+              <div className="flex items-center gap-2 mb-space-lg border-b border-border-light pb-space-sm">
+                <span className="material-symbols-outlined text-secondary text-xl">workspace_premium</span>
+                <h2 className="font-headline-md text-headline-md text-primary font-bold">
+                  Certifications
+                </h2>
+              </div>
+              {/* "certifications" column does not exist in the employee schema yet */}
+              <div className="flex flex-col items-center py-6 text-center">
+                <span className="material-symbols-outlined text-secondary text-4xl mb-3 opacity-40">
+                  military_tech
+                </span>
+                <p className="text-secondary font-body-md">
+                  No certifications on file yet.
+                </p>
+              </div>
+            </section>
+
+            {/* Quick employee info card (real data) */}
+            <section className="bg-surface-container-lowest border border-border-light rounded-xl p-space-lg md:p-space-xl shadow-sm">
+              <div className="flex items-center gap-2 mb-space-lg border-b border-border-light pb-space-sm">
+                <span className="material-symbols-outlined text-secondary text-xl">badge</span>
+                <h2 className="font-headline-md text-headline-md text-primary font-bold">
+                  Quick Info
+                </h2>
+              </div>
+              <div className="flex flex-col gap-space-md">
+                <div>
+                  <span className="font-label-sm text-label-sm text-secondary block mb-0.5 font-bold">Department</span>
+                  <p className="font-body-md text-on-surface font-medium">{employee.department || "Not provided"}</p>
+                </div>
+                <div>
+                  <span className="font-label-sm text-label-sm text-secondary block mb-0.5 font-bold">Designation</span>
+                  <p className="font-body-md text-on-surface font-medium">{employee.role || "Not provided"}</p>
+                </div>
+                <div>
+                  <span className="font-label-sm text-label-sm text-secondary block mb-0.5 font-bold">Date of Joining</span>
+                  <p className="font-body-md text-on-surface font-medium">{employee.doj || "Not provided"}</p>
+                </div>
+                <div>
+                  <span className="font-label-sm text-label-sm text-secondary block mb-0.5 font-bold">Employee Code</span>
+                  <p className="font-body-md text-on-surface font-mono font-medium">{employee.employeeCode || "Not provided"}</p>
+                </div>
+              </div>
+            </section>
+          </div>
         </div>
       )}
 
