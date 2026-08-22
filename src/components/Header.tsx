@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useApp } from "@/context/AppContext";
+import { useCheckInStatus } from "@/hooks/useDashboardStats";
 
 import { Logo } from "@/components/Logo";
 import { SystrayCheckInOut } from "@/components/attendance/SystrayCheckInOut";
