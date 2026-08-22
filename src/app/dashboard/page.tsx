@@ -155,6 +155,44 @@ export default function OverviewPage() {
             <Card title="Quick Actions" glass={false} className="bg-surface-container-lowest border border-border-light shadow-sm">
               <div className="flex flex-col gap-space-sm mt-2">
                 <Link
+                  href="/attendance"
+                  className="flex items-center gap-space-md p-space-md border border-border-light rounded-lg hover:border-slate-400 hover:bg-slate-surface transition-all group"
+                >
+                  <div className="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center text-secondary group-hover:text-primary transition-colors">
+                    <span className="material-symbols-outlined">clinical_notes</span>
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-label-md text-label-md text-primary font-bold">
+                      Attendance History
+                    </div>
+                    <div className="font-label-sm text-label-sm text-secondary">
+                      Check-in logs & time audits
+                    </div>
+                  </div>
+                  <span className="material-symbols-outlined text-secondary group-hover:text-primary">
+                    chevron_right
+                  </span>
+                </Link>
+                <Link
+                  href="/timeoff"
+                  className="flex items-center gap-space-md p-space-md border border-border-light rounded-lg hover:border-slate-400 hover:bg-slate-surface transition-all group"
+                >
+                  <div className="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center text-secondary group-hover:text-primary transition-colors">
+                    <span className="material-symbols-outlined">event_busy</span>
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-label-md text-label-md text-primary font-bold">
+                      Leave Management
+                    </div>
+                    <div className="font-label-sm text-label-sm text-secondary">
+                      Request time off & review queue
+                    </div>
+                  </div>
+                  <span className="material-symbols-outlined text-secondary group-hover:text-primary">
+                    chevron_right
+                  </span>
+                </Link>
+                <Link
                   href="/employees"
                   className="flex items-center gap-space-md p-space-md border border-border-light rounded-lg hover:border-slate-400 hover:bg-slate-surface transition-all group"
                 >
@@ -167,25 +205,6 @@ export default function OverviewPage() {
                     </div>
                     <div className="font-label-sm text-label-sm text-secondary">
                       Manage staff profiles
-                    </div>
-                  </div>
-                  <span className="material-symbols-outlined text-secondary group-hover:text-primary">
-                    chevron_right
-                  </span>
-                </Link>
-                <Link
-                  href="/payroll/1"
-                  className="flex items-center gap-space-md p-space-md border border-border-light rounded-lg hover:border-slate-400 hover:bg-slate-surface transition-all group"
-                >
-                  <div className="w-10 h-10 rounded-full bg-surface-container-low flex items-center justify-center text-secondary group-hover:text-primary transition-colors">
-                    <span className="material-symbols-outlined">settings_applications</span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-label-md text-label-md text-primary font-bold">
-                      Payroll Settings
-                    </div>
-                    <div className="font-label-sm text-label-sm text-secondary">
-                      Configure tax & cycles
                     </div>
                   </div>
                   <span className="material-symbols-outlined text-secondary group-hover:text-primary">
