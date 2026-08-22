@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useApp } from "@/context/AppContext";
+import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default function AttendancePage() {
   const { attendance, currentUser, leaves } = useApp();
@@ -123,7 +125,7 @@ export default function AttendancePage() {
                     {filteredAttendance.length === 0 ? (
                       <tr>
                         <td colSpan={6} className="px-6 py-10 text-center text-secondary font-body-md">
-                          No attendance records found.
+                          <EmptyState icon="clinical_notes" title="No attendance records found" />
                         </td>
                       </tr>
                     ) : (
@@ -269,7 +271,7 @@ export default function AttendancePage() {
                     {myAttendance.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="px-6 py-10 text-center text-secondary font-body-md">
-                          No personal attendance logs found.
+                          <EmptyState icon="clinical_notes" title="No personal attendance logs found" />
                         </td>
                       </tr>
                     ) : (
