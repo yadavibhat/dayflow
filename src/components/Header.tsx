@@ -36,6 +36,8 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
     { name: "Employees", href: "/employees" },
     { name: "Attendance", href: "/attendance" },
     { name: "Time Off", href: "/timeoff" },
+    { name: "Payroll", href: currentRole === "admin" ? "/hr/payroll" : "/payroll" },
+    ...(currentRole === "admin" ? [{ name: "Reports", href: "/reports" }] : []),
   ];
 
   // Derived real notifications from recent audit activity and pending leaves
