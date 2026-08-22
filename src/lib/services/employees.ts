@@ -11,6 +11,102 @@ import { revalidatePath } from "next/cache";
 import { EmployeeSelfEditSchema, EmployeeSchema } from "@/lib/validations/employee";
 
 /**
+ * Fetches all employees. HR/Admin only — employees cannot list the full directory.
+ * Supports optional search filtering by name, department, or designation.
+ */
+export async function listEmployees(search?: string) {
+  try {
+    const supabase = await createClient();
+
+    // Re-derive caller's role from session — never trust client claims
+    const { profile, error: authErr } = await getCurrentProfile();
+    if (authErr || !profile) {
+      return { employees: [], error: "Unauthorized" };
+    }
+
+    if (profile.role === "employee") {
+      return { employees: [], error: "Access Denied: HR or Admin role required" };
+    }
+
+    let query = supabase.from("employees").select("*").order("full_name", { ascending: true });
+
+    // Server-side search filtering using Supabase ilike
+    if (search && search.trim().length > 0) {
+      const term = `%${search.trim()}%`;
+      query = query.or(`full_name.ilike.${term},department.ilike.${term},designation.ilike.${term}`);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      return { employees: [], error: error.message };
+    }
+
+    // Fetch today's attendance records to attach status dots
+    const todayStr = new Date().toISOString().split("T")[0];
+    const { data: attendanceData } = await supabase
+      .from("attendance")
+      .select("employee_id, status")
+      .eq("date", todayStr);
+
+    const attendanceMap = new Map<string, string>();
+    attendanceData?.forEach((att) => {
+      if (att.employee_id && att.status) {
+        attendanceMap.set(att.employee_id, att.status);
+      }
+    });
+
+    const employees = (data || []).map((row) => {
+      const emp = mapDbToEmployee(row as DbEmployee);
+      emp.todayStatus = attendanceMap.get(emp.id) || null;
+      return emp;
+    });
+
+    return { employees, error: null };
+  } catch (err: any) {
+    return { employees: [], error: err.message || "Failed to fetch employees" };
+  }
+}
+
+/**
+ * Fetches a single employee by their row ID. HR/Admin only.
+ */
+export async function getEmployeeById(employeeId: string) {
+  try {
+    const supabase = await createClient();
+
+    const { profile, error: authErr } = await getCurrentProfile();
+    if (authErr || !profile) {
+      return { employee: null, error: "Unauthorized" };
+    }
+
+    if (profile.role === "employee") {
+      return { employee: null, error: "Access Denied: HR or Admin role required" };
+    }
+
+    const { data, error } = await supabase
+      .from("employees")
+      .select("*")
+      .eq("id", employeeId)
+      .maybeSingle();
+
+    if (error) {
+      return { employee: null, error: error.message };
+    }
+
+    if (!data) {
+      return { employee: null, error: "Employee not found" };
+    }
+
+    const employee = mapDbToEmployee(data as DbEmployee);
+    return { employee, error: null };
+  } catch (err: any) {
+    return { employee: null, error: err.message || "Failed to fetch employee" };
+  }
+}
+
+
+/**
  * Fetches the currently authenticated profile from Supabase Auth & profiles table.
  */
 export async function getCurrentProfile() {
