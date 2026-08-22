@@ -10,9 +10,10 @@ interface ProfileTabsProps {
   employee: Employee;
   role: "employee" | "hr" | "admin";
   showSalary: boolean;
+  readOnly?: boolean;
 }
 
-export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
+export function ProfileTabs({ employee, role, showSalary, readOnly = false }: ProfileTabsProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"resume" | "private" | "salary" | "security">(
     "private"
@@ -94,6 +95,7 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
 
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (readOnly) return;
     setFormErrors({});
     setErrorMsg(null);
     setSuccessMsg(null);
@@ -160,6 +162,7 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
 
   const handleSalarySave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (readOnly) return;
     if (!isSalaryValid) {
       setErrorMsg("The sum of components exceeds the base wage.");
       return;
@@ -184,9 +187,9 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
 
   // Permission checks
   const isEmployee = role === "employee";
-  const canEditPersonal = isEditing; // email, phone, address, photo/avatar
-  const canEditJob = isEditing && !isEmployee; // designation, department, manager, joining date
-  const canEditHRFields = isEditing && !isEmployee; // Name, DOB, Nationality, Marital status, Bank details, PAN, UAN
+  const canEditPersonal = isEditing && !readOnly; // email, phone, address, photo/avatar
+  const canEditJob = isEditing && !isEmployee && !readOnly; // designation, department, manager, joining date
+  const canEditHRFields = isEditing && !isEmployee && !readOnly; // Name, DOB, Nationality, Marital status, Bank details, PAN, UAN
 
   return (
     <div className="w-full">
@@ -387,7 +390,7 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
                       Personal Details
                     </h2>
                   </div>
-                  {!isEditing && (
+                  {!isEditing && !readOnly && (
                     <button
                       type="button"
                       onClick={() => {
@@ -1044,15 +1047,17 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
               </div>
             )}
 
-            <div className="pt-2 flex justify-end">
-              <button
-                type="submit"
-                disabled={saving || !isSalaryValid}
-                className="bg-ink text-on-primary font-label-md text-label-md px-6 py-2.5 rounded hover:bg-primary transition-colors cursor-pointer font-bold disabled:opacity-50 shadow-sm"
-              >
-                {saving ? "Saving..." : "Save Salary Config"}
-              </button>
-            </div>
+            {!readOnly && (
+              <div className="pt-2 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={saving || !isSalaryValid}
+                  className="bg-ink text-on-primary font-label-md text-label-md px-6 py-2.5 rounded hover:bg-primary transition-colors cursor-pointer font-bold disabled:opacity-50 shadow-sm"
+                >
+                  {saving ? "Saving..." : "Save Salary Config"}
+                </button>
+              </div>
+            )}
           </section>
         </form>
       )}
@@ -1066,48 +1071,54 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
               Security Settings
             </h2>
           </div>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              alert("Password update requested via Supabase Auth!");
-            }}
-            className="space-y-space-md"
-          >
-            <div>
-              <label className="block font-label-md text-label-md text-ink mb-1 font-bold">
-                Current Password
-              </label>
-              <input
-                type="password"
-                required
-                value={securityData.currentPassword}
-                onChange={(e) => setSecurityData({ ...securityData, currentPassword: e.target.value })}
-                className="w-full bg-surface-container-lowest border border-border-light rounded px-3 py-2 font-body-md text-ink focus:border-ink"
-                placeholder="••••••••"
-              />
-            </div>
-            <div>
-              <label className="block font-label-md text-label-md text-ink mb-1 font-bold">
-                New Password
-              </label>
-              <input
-                type="password"
-                required
-                value={securityData.newPassword}
-                onChange={(e) => setSecurityData({ ...securityData, newPassword: e.target.value })}
-                className="w-full bg-surface-container-lowest border border-border-light rounded px-3 py-2 font-body-md text-ink focus:border-ink"
-                placeholder="••••••••"
-              />
-            </div>
-            <div className="pt-2">
-              <button
-                type="submit"
-                className="bg-ink text-on-primary font-label-md text-label-md px-6 py-2.5 rounded hover:bg-primary transition-colors font-bold cursor-pointer shadow-sm"
-              >
-                Change Password
-              </button>
-            </div>
-          </form>
+          {readOnly ? (
+            <p className="text-secondary font-body-md">
+              Security settings are read-only when viewing other employee records.
+            </p>
+          ) : (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                alert("Password update requested via Supabase Auth!");
+              }}
+              className="space-y-space-md"
+            >
+              <div>
+                <label className="block font-label-md text-label-md text-ink mb-1 font-bold">
+                  Current Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={securityData.currentPassword}
+                  onChange={(e) => setSecurityData({ ...securityData, currentPassword: e.target.value })}
+                  className="w-full bg-surface-container-lowest border border-border-light rounded px-3 py-2 font-body-md text-ink focus:border-ink"
+                  placeholder="••••••••"
+                />
+              </div>
+              <div>
+                <label className="block font-label-md text-label-md text-ink mb-1 font-bold">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={securityData.newPassword}
+                  onChange={(e) => setSecurityData({ ...securityData, newPassword: e.target.value })}
+                  className="w-full bg-surface-container-lowest border border-border-light rounded px-3 py-2 font-body-md text-ink focus:border-ink"
+                  placeholder="••••••••"
+                />
+              </div>
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  className="bg-ink text-on-primary font-label-md text-label-md px-6 py-2.5 rounded hover:bg-primary transition-colors font-bold cursor-pointer shadow-sm"
+                >
+                  Change Password
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       )}
     </div>

@@ -83,6 +83,7 @@ export interface Employee {
     pfPct: number;
     ptFixed: number;
   };
+  todayStatus?: string | null;
 }
 
 // Zod schema for updating profile details (employee self-edit and HR edit validations)
