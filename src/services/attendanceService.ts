@@ -1,6 +1,26 @@
 import { AttendanceLog, LeaveRequest } from "@/context/AppContext";
 import { CheckInInput, CheckOutInput, CheckInSchema, CheckOutSchema } from "@/lib/validations/attendance";
-import { getTodayDateString, getCurrentTimeString, computeWorkedDuration, isDateInLeaveRange } from "@/lib/dateUtils";
+import {
+  getTodayDateString,
+  getCurrentTimeString,
+  computeWorkedDuration,
+  isDateInLeaveRange,
+} from "@/lib/dateUtils";
+import {
+  format,
+  parseISO,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  isWeekend,
+  isSameMonth,
+  startOfWeek,
+  endOfWeek,
+  eachWeekOfInterval,
+  isAfter,
+  startOfDay,
+  isValid,
+} from "date-fns";
 
 const STORAGE_KEY_ATTENDANCE = "dayflow_attendance_records";
 
@@ -8,6 +28,17 @@ export interface AttendanceActionResult {
   success: boolean;
   record?: AttendanceLog;
   error?: string;
+}
+
+export type DerivedDayStatusType = "Present" | "Late" | "Half-day" | "Leave" | "Absent" | "Weekend";
+
+export interface DerivedDayStatus {
+  status: DerivedDayStatusType;
+  badgeClass: string;
+  checkIn: string;
+  checkOut: string;
+  workHours: string;
+  extraHours: string;
 }
 
 export function getPersistedAttendanceLogs(): AttendanceLog[] {
@@ -40,10 +71,129 @@ export function getTodayAttendance(employeeId: string, logs?: AttendanceLog[]): 
 }
 
 /**
- * Derives the real status of an employee for today:
- * 1. "On Leave" (Airplane) if an approved leave covers today
- * 2. "Present" (Green Dot) if checked in today
- * 3. "Absent" (Yellow Dot) if not checked in today and no approved leave
+ * Reusable, deterministic daily status derivation.
+ * Business Rules:
+ * 1. Approved Leave overrides attendance -> "Leave".
+ * 2. Weekend (Sat/Sun) -> "Weekend".
+ * 3. Checked in with work hours < 4.5h -> "Half-day".
+ * 4. Checked in after 09:30 AM -> "Late".
+ * 5. Checked in with full shift (>= 4.5h) -> "Present".
+ * 6. Working day in past/today with no check-in and no leave -> "Absent".
+ */
+export function deriveDailyAttendanceStatus(
+  dayDate: Date,
+  record?: AttendanceLog | null,
+  userLeaves: LeaveRequest[] = []
+): DerivedDayStatus {
+  const dayStr = format(dayDate, "yyyy-MM-dd");
+  const today = startOfDay(new Date());
+  const isPastOrToday = !isAfter(startOfDay(dayDate), today);
+  const isWeekendDay = isWeekend(dayDate);
+
+  // Rule 1: Check if date falls in an approved leave range (Leave precedence)
+  const onLeave = userLeaves.some((l) => {
+    if (l.status !== "Approved") return false;
+    if (l.dates.includes(dayStr)) return true;
+    if (l.dates.includes("-")) {
+      const parts = l.dates.split("-").map((p) => p.trim());
+      if (parts.length === 2) {
+        return isDateInLeaveRange(dayStr, parts[0], parts[1]);
+      }
+    }
+    return false;
+  });
+
+  if (onLeave) {
+    return {
+      status: "Leave",
+      badgeClass: "bg-blue-50 text-blue-700 border border-blue-200",
+      checkIn: "--:--",
+      checkOut: "--:--",
+      workHours: "--",
+      extraHours: "-",
+    };
+  }
+
+  // Rule 2: Weekend
+  if (isWeekendDay) {
+    return {
+      status: "Weekend",
+      badgeClass: "bg-slate-100 text-slate-500 border border-slate-200",
+      checkIn: "--:--",
+      checkOut: "--:--",
+      workHours: "--",
+      extraHours: "-",
+    };
+  }
+
+  // Rule 3: Check real attendance record
+  if (record && record.checkIn && record.checkIn !== "--:--") {
+    // Check half-day threshold (< 4.5 hours worked)
+    if (record.workHours && record.workHours !== "--") {
+      const match = record.workHours.match(/(\d+)h\s*(\d*)m?/);
+      if (match) {
+        const h = parseInt(match[1] || "0");
+        const m = parseInt(match[2] || "0");
+        const totalHours = h + m / 60;
+        if (totalHours > 0 && totalHours < 4.5) {
+          return {
+            status: "Half-day",
+            badgeClass: "bg-purple-50 text-purple-700 border border-purple-200",
+            checkIn: record.checkIn,
+            checkOut: record.checkOut,
+            workHours: record.workHours,
+            extraHours: record.extraHours,
+          };
+        }
+      }
+    }
+
+    if (record.status === "Late") {
+      return {
+        status: "Late",
+        badgeClass: "bg-amber-50 text-amber-700 border border-amber-200",
+        checkIn: record.checkIn,
+        checkOut: record.checkOut,
+        workHours: record.workHours,
+        extraHours: record.extraHours,
+      };
+    }
+
+    return {
+      status: "Present",
+      badgeClass: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+      checkIn: record.checkIn,
+      checkOut: record.checkOut,
+      workHours: record.workHours,
+      extraHours: record.extraHours,
+    };
+  }
+
+  // Rule 4: Unattended past or today working day -> Absent
+  if (isPastOrToday) {
+    return {
+      status: "Absent",
+      badgeClass: "bg-rose-50 text-rose-700 border border-rose-200",
+      checkIn: "--:--",
+      checkOut: "--:--",
+      workHours: "--",
+      extraHours: "-",
+    };
+  }
+
+  // Future working day
+  return {
+    status: "Weekend",
+    badgeClass: "bg-slate-50 text-slate-400 border border-slate-100",
+    checkIn: "--:--",
+    checkOut: "--:--",
+    workHours: "--",
+    extraHours: "-",
+  };
+}
+
+/**
+ * Derives the live status indicator for the systray / header.
  */
 export function deriveEmployeeLiveStatus(
   employeeId: string,
@@ -64,7 +214,6 @@ export function deriveEmployeeLiveStatus(
   // Check 1: Approved Leave covering today
   const onApprovedLeave = leaveRequests.some((l) => {
     if (l.employeeId !== employeeId || l.status !== "Approved") return false;
-    // Check if dates contains ISO or standard formatted range
     if (l.dates.includes("-")) {
       const parts = l.dates.split("-").map((p) => p.trim());
       if (parts.length === 2) {
@@ -125,6 +274,68 @@ export function deriveEmployeeLiveStatus(
 }
 
 /**
+ * Computes monthly summary metrics dynamically from real records.
+ */
+export function calculateEmployeeAttendanceSummary(
+  targetMonth: Date,
+  attendanceLogs: AttendanceLog[],
+  leaveRequests: LeaveRequest[]
+) {
+  const monthStart = startOfMonth(targetMonth);
+  const monthEnd = endOfMonth(targetMonth);
+  const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+
+  let daysPresent = 0;
+  let daysLate = 0;
+  let daysHalfDay = 0;
+  let daysAbsent = 0;
+  let daysLeave = 0;
+  let totalWorkingDays = 0;
+  let totalWorkedMinutes = 0;
+
+  daysInMonth.forEach((dayDate) => {
+    const dateStr = format(dayDate, "yyyy-MM-dd");
+    const record = attendanceLogs.find((a) => a.date === dateStr);
+    const derived = deriveDailyAttendanceStatus(dayDate, record, leaveRequests);
+
+    if (!isWeekend(dayDate)) {
+      totalWorkingDays++;
+    }
+
+    if (derived.status === "Present") daysPresent++;
+    else if (derived.status === "Late") {
+      daysPresent++;
+      daysLate++;
+    } else if (derived.status === "Half-day") {
+      daysHalfDay++;
+    } else if (derived.status === "Leave") {
+      daysLeave++;
+    } else if (derived.status === "Absent") {
+      daysAbsent++;
+    }
+
+    if (derived.workHours && derived.workHours !== "--") {
+      const match = derived.workHours.match(/(\d+)h\s*(\d*)m?/);
+      if (match) {
+        totalWorkedMinutes += parseInt(match[1] || "0") * 60 + parseInt(match[2] || "0");
+      }
+    }
+  });
+
+  const totalHours = `${Math.floor(totalWorkedMinutes / 60)}h ${totalWorkedMinutes % 60}m`;
+
+  return {
+    daysPresent,
+    daysLate,
+    daysHalfDay,
+    daysAbsent,
+    daysLeave,
+    totalWorkingDays,
+    totalHours,
+  };
+}
+
+/**
  * Performs validated Check-In with duplicate open record prevention.
  */
 export async function executeCheckIn(
@@ -132,7 +343,6 @@ export async function executeCheckIn(
   employeeName: string,
   existingLogs: AttendanceLog[]
 ): Promise<AttendanceActionResult> {
-  // 1. Server/Service Zod Validation
   const validation = CheckInSchema.safeParse(input);
   if (!validation.success) {
     return {
@@ -144,7 +354,6 @@ export async function executeCheckIn(
   const today = getTodayDateString();
   const currentTime = getCurrentTimeString();
 
-  // 2. Block duplicate open record check
   const existingToday = existingLogs.find(
     (log) => log.employeeId === input.employeeId && log.date === today
   );
@@ -158,7 +367,6 @@ export async function executeCheckIn(
     }
   }
 
-  // Determine status (Shift starts 09:30 AM)
   const now = new Date();
   const shiftStart = new Date();
   shiftStart.setHours(9, 30, 0, 0);
@@ -192,7 +400,6 @@ export async function executeCheckOut(
   input: CheckOutInput,
   existingLogs: AttendanceLog[]
 ): Promise<AttendanceActionResult> {
-  // 1. Server/Service Zod Validation
   const validation = CheckOutSchema.safeParse(input);
   if (!validation.success) {
     return {
@@ -204,7 +411,6 @@ export async function executeCheckOut(
   const today = getTodayDateString();
   const currentTime = getCurrentTimeString();
 
-  // 2. Verify an open attendance record exists for today
   const existingToday = existingLogs.find(
     (log) => log.employeeId === input.employeeId && log.date === today
   );
@@ -223,7 +429,6 @@ export async function executeCheckOut(
     };
   }
 
-  // 3. Compute duration safely
   const { workHours, extraHours } = computeWorkedDuration(
     existingToday.checkIn,
     currentTime,
