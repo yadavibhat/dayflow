@@ -258,40 +258,58 @@ export default function AttendancePage() {
                     </tr>
                   </thead>
                   <tbody className="font-body-md text-body-md divide-y divide-border-light">
-                    {myAttendance.map((item) => (
-                      <tr
-                        key={item.id}
-                        className="hover:bg-slate-surface transition-colors"
-                      >
-                        <td className="px-6 py-4 font-semibold text-primary">
-                          {new Date(item.date).toLocaleDateString("en-US", {
-                            weekday: "short",
-                            month: "short",
-                            day: "2-digit",
-                          })}
-                        </td>
-                        <td className="px-6 py-4 text-secondary">{item.checkIn}</td>
-                        <td className="px-6 py-4 text-secondary">{item.checkOut}</td>
-                        <td className="px-6 py-4 text-primary font-medium">{item.workHours}</td>
-                        <td className="px-6 py-4">
-                          {item.status === "Present" && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded bg-success-soft text-success-text font-label-sm text-label-sm font-bold">
-                              Present
+                    {myAttendance.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-12 text-center">
+                          <div className="flex flex-col items-center justify-center gap-2">
+                            <span className="material-symbols-outlined text-4xl text-slate-300">
+                              event_busy
                             </span>
-                          )}
-                          {item.status === "Late" && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded bg-warning-soft text-warning-text font-label-sm text-label-sm font-bold">
-                              Late In
-                            </span>
-                          )}
-                          {item.status === "On Leave" && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded bg-surface-container-low text-secondary font-label-sm text-label-sm font-bold">
-                              Approved Leave
-                            </span>
-                          )}
+                            <p className="font-headline-md text-sm font-semibold text-primary">
+                              No attendance records for this period
+                            </p>
+                            <p className="font-body-md text-xs text-secondary max-w-sm">
+                              You haven't logged any attendance sessions yet. Use the Check-In button in the top navigation bar to start your workday.
+                            </p>
+                          </div>
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      myAttendance.map((item) => (
+                        <tr
+                          key={item.id}
+                          className="hover:bg-slate-surface transition-colors"
+                        >
+                          <td className="px-6 py-4 font-semibold text-primary">
+                            {new Date(item.date).toLocaleDateString("en-US", {
+                              weekday: "short",
+                              month: "short",
+                              day: "2-digit",
+                            })}
+                          </td>
+                          <td className="px-6 py-4 text-secondary">{item.checkIn}</td>
+                          <td className="px-6 py-4 text-secondary">{item.checkOut}</td>
+                          <td className="px-6 py-4 text-primary font-medium">{item.workHours}</td>
+                          <td className="px-6 py-4">
+                            {item.status === "Present" && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded bg-success-soft text-success-text font-label-sm text-label-sm font-bold">
+                                Present
+                              </span>
+                            )}
+                            {item.status === "Late" && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded bg-warning-soft text-warning-text font-label-sm text-label-sm font-bold">
+                                Late In
+                              </span>
+                            )}
+                            {item.status === "On Leave" && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded bg-surface-container-low text-secondary font-label-sm text-label-sm font-bold">
+                                Approved Leave
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
