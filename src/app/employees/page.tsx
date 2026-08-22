@@ -16,7 +16,7 @@ function EmployeeDirectory() {
   // Form State
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
-  const [department, setDepartment] = useState("Engineering");
+  const [department, setDepartment] = useState<"Design" | "Engineering" | "Marketing" | "Finance" | "HR">("Engineering");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [baseSalary, setBaseSalary] = useState("70000");
@@ -90,7 +90,7 @@ function EmployeeDirectory() {
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-space-md mb-space-lg">
           <div>
-            <h1 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-ink font-bold">
+            <h1 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg gradient-heading font-bold">
               Employee Directory
             </h1>
             <p className="font-body-md text-secondary mt-2">
@@ -122,7 +122,7 @@ function EmployeeDirectory() {
             <div
               key={emp.id}
               onClick={() => router.push(`/payroll/${emp.id}`)}
-              className="bg-surface-container-lowest border border-border-light rounded-xl p-space-md flex flex-col items-center text-center hover:shadow-[0_4px_12px_rgba(0,0,0,0.03)] hover:border-slate-300 transition-all duration-300 cursor-pointer group relative"
+              className="glass-card border border-border-light rounded-xl p-space-md flex flex-col items-center text-center hover-lift cursor-pointer group relative"
             >
               {/* Status Dot mapping */}
               <div className="relative mb-4">
@@ -134,12 +134,12 @@ function EmployeeDirectory() {
                   />
                 ) : (
                   <div className="w-20 h-20 rounded-full bg-surface-container-low flex items-center justify-center border border-border-light text-secondary font-headline-md text-3xl font-bold">
-                    {emp.name.split(" ").map(n => n[0]).join("")}
+                    {emp.name.split(" ").map((n: string) => n[0]).join("")}
                   </div>
                 )}
                 {emp.status === "Active" && (
                   <div
-                    className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-success-text border-2 border-surface-container-lowest"
+                    className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-success-text border-2 border-surface-container-lowest pulse-active-ring"
                     title="Active"
                   ></div>
                 )}
@@ -261,7 +261,7 @@ function EmployeeDirectory() {
                     <select
                       className="w-full bg-surface-container-lowest border border-border-light rounded px-3 py-2 font-body-md text-ink focus:border-ink"
                       value={department}
-                      onChange={(e) => setDepartment(e.target.value)}
+                      onChange={(e) => setDepartment(e.target.value as any)}
                     >
                       <option value="Design">Design</option>
                       <option value="Engineering">Engineering</option>
