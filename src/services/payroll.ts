@@ -79,7 +79,17 @@ export async function upsertSalaryComponents(employeeId: string, components: Sal
       return { success: false, error: "Access Denied: HR or Admin role required" };
     }
 
-    // Call pure calculations function server-side
+    // 1. Zod validation identical to client
+    const { SalaryComponentsSchema } = require("../lib/validations/payroll_audit");
+    const validation = SalaryComponentsSchema.safeParse(components);
+    if (!validation.success) {
+      return {
+        success: false,
+        error: "Validation failed: " + validation.error.errors.map((e: any) => e.message).join(", "),
+      };
+    }
+
+    // 2. Recompute basic and net_pay server-side from percentages (never accept client-computed net_pay)
     const computed = calculateSalary(components);
 
     // Fetch existing employee to record pre-mutation state
@@ -89,7 +99,7 @@ export async function upsertSalaryComponents(employeeId: string, components: Sal
       .eq("id", employeeId)
       .maybeSingle();
 
-    // Write to employees table (storing inside salary_structure)
+    // 3. Write structure back to employees table (as JSONB config)
     const { error: updateErr } = await supabase
       .from("employees")
       .update({
@@ -104,12 +114,31 @@ export async function upsertSalaryComponents(employeeId: string, components: Sal
       return { success: false, error: updateErr.message };
     }
 
-    // Write audit log
+    // 4. Upsert the payroll row
+    const payPeriod = new Date().toISOString().slice(0, 7); // e.g. "2026-08"
+    const { error: payrollErr } = await supabase
+      .from("payroll")
+      .upsert({
+        employee_id: employeeId,
+        pay_period: payPeriod,
+        basic: computed.basic,
+        allowances: computed.allowancesTotal,
+        deductions: computed.deductionsTotal,
+        net_pay: computed.netPay,
+        status: "Generated",
+        updated_at: new Date().toISOString()
+      }, { onConflict: "employee_id,pay_period" });
+
+    if (payrollErr) {
+      console.error("Failed to upsert payroll record row:", payrollErr.message);
+    }
+
+    // 5. Write audit log (action: 'salary_updated')
     await writeAuditLog(
       profile.id,
       "employees",
       employeeId,
-      "SALARY_STRUCTURE_UPDATED",
+      "salary_updated",
       existingEmp?.salary_structure || null,
       { ...components, computed }
     );
