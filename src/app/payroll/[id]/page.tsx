@@ -177,13 +177,13 @@ export default function PayrollManagementPage() {
                 <div className="space-y-4">
                   <div>
                     <label className="block font-label-sm text-label-sm text-secondary uppercase mb-2 font-bold">
-                      Total Fixed Wage (GBP)
+                      Total Fixed Wage (INR ₹ / year)
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary font-body-md">£</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary font-bold">₹</span>
                       <input
                         className="w-full pl-8 pr-4 py-3 bg-surface-container-lowest border border-border-light rounded-lg font-body-lg text-body-lg text-primary focus:border-ink transition-colors font-medium"
-                        placeholder="0.00"
+                        placeholder="1200000"
                         type="text"
                         value={base}
                         onChange={(e) => {
@@ -216,7 +216,7 @@ export default function PayrollManagementPage() {
                       Awaiting Calculation
                     </p>
                     <p className="font-body-md text-body-md text-secondary leading-snug">
-                      Update the Annual Base Wage and click calculate to distribute allowances.
+                      Update the Annual Base Wage in ₹ and click calculate to distribute allowances.
                     </p>
                   </div>
                 ) : (
@@ -225,10 +225,10 @@ export default function PayrollManagementPage() {
                       check_circle
                     </span>
                     <p className="font-label-md text-label-md text-success-text mb-1 font-bold">
-                      Salary Computed
+                      Salary Computed (₹)
                     </p>
                     <p className="font-body-md text-body-md text-secondary leading-snug">
-                      Salary components distributed. Ready to commit profile updates.
+                      Annual: ₹{(parseFloat(base) || 0).toLocaleString("en-IN")} • Monthly: ₹{((parseFloat(base) || 0) / 12).toLocaleString("en-IN", { maximumFractionDigits: 0 })}
                     </p>
                   </div>
                 )}
@@ -240,7 +240,7 @@ export default function PayrollManagementPage() {
               <div className="bg-surface-container-lowest border border-border-light rounded-xl overflow-hidden shadow-sm">
                 <div className="px-space-md py-space-sm border-b border-border-light bg-slate-surface flex justify-between items-center">
                   <h3 className="font-headline-md text-headline-md text-primary font-bold">
-                    Salary Components Distribution
+                    Salary Components Distribution (INR ₹)
                   </h3>
                   <span
                     className={`font-label-sm text-label-sm px-2 py-1 rounded font-bold ${
@@ -291,7 +291,7 @@ export default function PayrollManagementPage() {
                       </div>
                     </div>
                     <div className="col-span-3 text-right font-body-md text-body-md text-primary font-medium">
-                      £{basicAmt.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ₹{basicAmt.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                   </div>
 
@@ -320,7 +320,7 @@ export default function PayrollManagementPage() {
                       </div>
                     </div>
                     <div className="col-span-3 text-right font-body-md text-body-md text-primary font-medium">
-                      £{hraAmt.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ₹{hraAmt.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                   </div>
 
@@ -347,7 +347,7 @@ export default function PayrollManagementPage() {
                       </div>
                     </div>
                     <div className="col-span-3 text-right font-body-md text-body-md text-primary font-medium">
-                      £{stdAmt.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ₹{stdAmt.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                   </div>
 
@@ -374,7 +374,7 @@ export default function PayrollManagementPage() {
                       </div>
                     </div>
                     <div className="col-span-3 text-right font-body-md text-body-md text-primary font-medium">
-                      £{specialAmt.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ₹{specialAmt.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                   </div>
                 </div>
@@ -384,33 +384,33 @@ export default function PayrollManagementPage() {
               <div className="bg-surface-container-lowest border border-border-light rounded-xl overflow-hidden shadow-sm">
                 <div className="px-space-md py-space-sm border-b border-border-light bg-slate-surface">
                   <h3 className="font-headline-md text-headline-md text-primary font-bold">
-                    Deductions &amp; Compliance
+                    Deductions &amp; Statutory Compliance (INR ₹)
                   </h3>
                 </div>
                 <div className="p-space-md grid grid-cols-1 md:grid-cols-2 gap-space-md">
                   <div className="border border-border-light rounded-lg p-space-sm flex justify-between items-start">
                     <div>
-                      <p className="font-label-md text-label-md text-primary font-bold">Provident Fund</p>
+                      <p className="font-label-md text-label-md text-primary font-bold">Provident Fund (PF)</p>
                       <p className="font-label-sm text-[10px] text-secondary uppercase mt-1 font-bold">
                         12% of Basic Salary
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="font-body-md text-body-md text-primary font-medium">
-                        £{pfAmt.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        ₹{pfAmt.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
                     </div>
                   </div>
                   <div className="border border-border-light rounded-lg p-space-sm flex justify-between items-start">
                     <div>
-                      <p className="font-label-md text-label-md text-primary font-bold">Professional Tax</p>
+                      <p className="font-label-md text-label-md text-primary font-bold">Professional Tax (PT)</p>
                       <p className="font-label-sm text-[10px] text-secondary uppercase mt-1 font-bold">
                         Fixed Deductible
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="font-body-md text-body-md text-primary font-medium">
-                        £{ptAmt.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        ₹{ptAmt.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
                     </div>
                   </div>

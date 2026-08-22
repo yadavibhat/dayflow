@@ -19,10 +19,13 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
     currentUser,
     currentRole,
     setRole,
+    auditLogs,
+    leaves,
   } = useApp();
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
 
   const toggleRole = () => {
     setRole(currentRole === "admin" ? "employee" : "admin");
@@ -34,6 +37,9 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
     { name: "Attendance", href: "/attendance" },
     { name: "Time Off", href: "/timeoff" },
   ];
+
+  // Derived real notifications from recent audit activity and pending leaves
+  const recentNotifications = auditLogs.slice(0, 5);
 
   return (
     <header className="glass-panel border-b border-border-light h-16 flex items-center justify-between w-full px-gutter-mobile md:px-gutter-desktop sticky top-0 z-40 bg-surface-container-lowest/80">
@@ -85,38 +91,75 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
               onClick={() => {
                 setShowNotifications(!showNotifications);
                 setShowProfileMenu(false);
+                setShowHelpModal(false);
               }}
               className={`p-2 hover:bg-surface-container-low rounded-full transition-colors relative ${
                 showNotifications ? "bg-surface-container-low text-primary" : ""
               }`}
+              title="Notifications"
             >
               <span className="material-symbols-outlined text-xl">notifications</span>
-              {/* Notification dot */}
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-danger-text rounded-full"></span>
+              {recentNotifications.length > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-emerald-500 rounded-full"></span>
+              )}
             </button>
 
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 bg-surface-container-lowest border border-border-light rounded-xl shadow-xl z-50 p-space-md">
-                <h4 className="font-headline-md text-label-md text-primary font-bold mb-space-sm pb-space-xs border-b border-border-light">
-                  Notifications
-                </h4>
-                <div className="space-y-space-md text-body-md text-secondary">
-                  <div className="border-b border-surface-container-low pb-2">
-                    <p className="text-primary font-medium">Leave approved</p>
-                    <p className="text-[12px] mt-0.5">Your Sick Leave for Oct 10 was approved.</p>
-                  </div>
-                  <div className="pb-1">
-                    <p className="text-primary font-medium">Monthly Payroll</p>
-                    <p className="text-[12px] mt-0.5">Salary stub for Oct 2026 is generated.</p>
-                  </div>
+              <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-surface-container-lowest border border-border-light rounded-xl shadow-xl z-50 p-space-md">
+                <div className="flex items-center justify-between mb-space-sm pb-space-xs border-b border-border-light">
+                  <h4 className="font-headline-md text-label-md text-primary font-bold">
+                    Activity &amp; Notifications
+                  </h4>
+                  <span className="text-[11px] text-secondary font-mono">Real-time</span>
+                </div>
+                <div className="space-y-space-sm max-h-72 overflow-y-auto">
+                  {recentNotifications.length === 0 ? (
+                    <p className="text-xs text-secondary py-3 text-center">No new notifications.</p>
+                  ) : (
+                    recentNotifications.map((log) => (
+                      <div key={log.id} className="border-b border-surface-container-low pb-2 text-xs">
+                        <p className="text-primary font-semibold">
+                          {log.user}: <span className="font-normal text-slate-700">{log.action}</span>
+                        </p>
+                        <p className="text-[10px] text-secondary mt-0.5 font-mono">{log.timestamp}</p>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             )}
           </div>
 
-          <button className="p-2 hover:bg-surface-container-low rounded-full transition-colors hidden sm:block">
-            <span className="material-symbols-outlined text-xl">help</span>
-          </button>
+          {/* Help & Support Button */}
+          <div className="relative">
+            <button
+              onClick={() => {
+                setShowHelpModal(!showHelpModal);
+                setShowNotifications(false);
+                setShowProfileMenu(false);
+              }}
+              className={`p-2 hover:bg-surface-container-low rounded-full transition-colors hidden sm:block ${
+                showHelpModal ? "bg-surface-container-low text-primary" : ""
+              }`}
+              title="Help & Support Guide"
+            >
+              <span className="material-symbols-outlined text-xl">info</span>
+            </button>
+
+            {showHelpModal && (
+              <div className="absolute right-0 mt-2 w-80 bg-surface-container-lowest border border-border-light rounded-xl shadow-xl z-50 p-space-md text-xs">
+                <div className="flex items-center justify-between mb-2 pb-1 border-b border-border-light">
+                  <h4 className="font-bold text-primary text-sm">Dayflow HRMS Guide</h4>
+                  <button onClick={() => setShowHelpModal(false)} className="text-secondary hover:text-primary">✕</button>
+                </div>
+                <ul className="space-y-1.5 text-slate-600">
+                  <li>• <strong>Systray Check-In</strong>: Use the top bar to record daily attendance punches.</li>
+                  <li>• <strong>Time Off</strong>: Apply for leaves and track approved balances in ₹ INR.</li>
+                  <li>• <strong>Role Switch</strong>: Use the profile menu to switch between Employee and HR views.</li>
+                </ul>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* User Profile Avatar with Switcher */}

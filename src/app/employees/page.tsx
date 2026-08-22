@@ -19,7 +19,7 @@ function EmployeeDirectory() {
   const [department, setDepartment] = useState<"Design" | "Engineering" | "Marketing" | "Finance" | "HR">("Engineering");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [baseSalary, setBaseSalary] = useState("70000");
+  const [baseSalary, setBaseSalary] = useState("1200000");
 
   // Open modal if URL query specifies it
   useEffect(() => {
@@ -165,9 +165,14 @@ function EmployeeDirectory() {
                 {emp.name}
               </h3>
               <p className="font-body-md text-secondary">{emp.role}</p>
-              <span className="text-[11px] text-secondary font-label-sm uppercase tracking-wider mt-1 bg-surface-container-low px-2 py-0.5 rounded">
-                {emp.department}
-              </span>
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="text-[11px] text-secondary font-label-sm uppercase tracking-wider bg-surface-container-low px-2 py-0.5 rounded">
+                  {emp.department}
+                </span>
+                <span className="text-[11px] text-primary font-bold font-mono bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-100">
+                  ₹{(emp.salary?.base || 1200000).toLocaleString("en-IN")}/yr
+                </span>
+              </div>
 
               <div
                 className="mt-4 pt-4 border-t border-border-light w-full flex justify-center gap-space-md text-secondary"
@@ -234,7 +239,7 @@ function EmployeeDirectory() {
                     type="text"
                     required
                     className="w-full bg-surface-container-lowest border border-border-light rounded px-3 py-2 font-body-md text-ink focus:border-ink"
-                    placeholder="Sarah Jenkins"
+                    placeholder="Mahi Soni"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                   />
@@ -281,7 +286,7 @@ function EmployeeDirectory() {
                       type="email"
                       required
                       className="w-full bg-surface-container-lowest border border-border-light rounded px-3 py-2 font-body-md text-ink focus:border-ink"
-                      placeholder="name@company.com"
+                      placeholder="mahi.soni@dayflow.in"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                     />
@@ -293,7 +298,7 @@ function EmployeeDirectory() {
                     <input
                       type="tel"
                       className="w-full bg-surface-container-lowest border border-border-light rounded px-3 py-2 font-body-md text-ink focus:border-ink"
-                      placeholder="+44 20 7946 0000"
+                      placeholder="+91 98765 43210"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                     />
@@ -302,15 +307,15 @@ function EmployeeDirectory() {
 
                 <div>
                   <label className="block font-label-md text-label-md text-ink mb-1 font-bold">
-                    Annual Base Salary (GBP)
+                    Annual Base Salary (INR ₹)
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary">£</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary font-bold">₹</span>
                     <input
                       type="number"
                       required
                       className="w-full bg-surface-container-lowest border border-border-light rounded pl-8 pr-4 py-2 font-body-md text-ink focus:border-ink"
-                      placeholder="70000"
+                      placeholder="1200000"
                       value={baseSalary}
                       onChange={(e) => setBaseSalary(e.target.value)}
                     />

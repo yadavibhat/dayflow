@@ -139,25 +139,40 @@ export default function AttendancePage() {
     });
   }, [attendance, searchQuery, statusFilter, selectedAdminDate]);
 
-  // Export CSV Handler
+  // Export CSV Handler with clear Check-In and Check-Out times
   const handleExportCSV = () => {
-    const headers = ["Employee ID", "Employee Name", "Date", "Check In", "Check Out", "Work Hours", "Extra Hours", "Status"];
-    const rows = (viewType === "admin" ? adminFilteredAttendance : dailyHistory).map((row: any) => [
-      row.employeeId || currentUser.id,
-      row.employeeName || currentUser.name,
-      row.date,
-      row.checkIn,
-      row.checkOut,
-      row.workHours,
-      row.extraHours,
-      row.status,
+    const headers = [
+      "Employee ID",
+      "Employee Name",
+      "Date",
+      "Check In Time",
+      "Check Out Time",
+      "Total Worked Hours",
+      "Extra Overtime Hours",
+      "Status",
+    ];
+
+    const sourceRows = viewType === "admin" ? adminFilteredAttendance : dailyHistory;
+    const rows = sourceRows.map((row: any) => [
+      `"${row.employeeId || currentUser.id}"`,
+      `"${row.employeeName || currentUser.name}"`,
+      `"${row.date || ""}"`,
+      `"${row.checkIn && row.checkIn !== "--:--" ? row.checkIn : "Not Checked In"}"`,
+      `"${row.checkOut && row.checkOut !== "--:--" ? row.checkOut : "Not Checked Out"}"`,
+      `"${row.workHours && row.workHours !== "--" ? row.workHours : "0h 0m"}"`,
+      `"${row.extraHours && row.extraHours !== "--" ? row.extraHours : "0h 0m"}"`,
+      `"${row.status || "Absent"}"`,
     ]);
 
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const csvContent =
+      "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Dayflow_Attendance_${viewType}_${format(selectedMonth, "yyyy_MM")}.csv`);
+    link.setAttribute(
+      "download",
+      `Dayflow_Attendance_${viewType}_${format(selectedMonth, "yyyy_MM")}.csv`
+    );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -411,21 +426,21 @@ export default function AttendancePage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-7 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-2">
                       {week.dayBreakdowns.map((day) => (
                         <div
                           key={day.dateStr}
-                          className={`p-2.5 rounded-lg border flex flex-col justify-between min-h-[72px] ${
+                          className={`p-3 rounded-xl border flex flex-col justify-between min-h-[96px] ${
                             day.isWeekend
                               ? "bg-slate-50 border-slate-200 opacity-60"
-                              : "bg-surface-container-lowest border-border-light"
+                              : "bg-surface-container-lowest border-border-light shadow-xs"
                           }`}
                         >
-                          <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-bold text-secondary">
-                              {format(day.dayDate, "EEE d")}
+                          <div className="flex items-center justify-between border-b border-border-light/60 pb-1 mb-1.5">
+                            <span className="text-xs font-bold text-primary">
+                              {format(day.dayDate, "EEE, d MMM")}
                             </span>
-                            <span className={`h-2 w-2 rounded-full ${
+                            <span className={`inline-block h-2 w-2 rounded-full ${
                               day.status === "Present" || day.status === "Late"
                                 ? "bg-emerald-500"
                                 : day.status === "Leave"
@@ -437,12 +452,28 @@ export default function AttendancePage() {
                                 : "bg-slate-300"
                             }`}></span>
                           </div>
-                          <div className="mt-2 flex flex-col">
-                            <span className="text-[11px] font-bold text-primary truncate">
+                          
+                          <div className="space-y-1 text-[11px]">
+                            <div className="flex justify-between items-center text-secondary">
+                              <span>In:</span>
+                              <span className="font-mono font-medium text-primary">
+                                {day.checkIn && day.checkIn !== "--:--" ? day.checkIn : "—"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center text-secondary">
+                              <span>Out:</span>
+                              <span className="font-mono font-medium text-primary">
+                                {day.checkOut && day.checkOut !== "--:--" ? day.checkOut : "—"}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="mt-2 pt-1.5 border-t border-border-light/60 flex justify-between items-center">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-secondary">
                               {day.status}
                             </span>
-                            <span className="text-[10px] text-secondary font-mono">
-                              {day.workHours !== "--" ? day.workHours : "—"}
+                            <span className="text-[11px] font-mono font-bold text-primary">
+                              {day.workHours !== "--" ? day.workHours : "0h"}
                             </span>
                           </div>
                         </div>
