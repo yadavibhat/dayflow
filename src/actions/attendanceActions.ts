@@ -1,7 +1,21 @@
 "use server";
 
+/**
+ * ============================================================================
+ * Dayflow HRMS — Server-Side Attendance Actions & Authorization Guard
+ * ============================================================================
+ * 
+ * MISSION & DOMAIN:
+ * Provides secure server-side data access for attendance records.
+ * 
+ * SECURITY ARCHITECTURE:
+ * - Re-evaluates caller role at the server boundary before any database query.
+ * - Non-HR/Admin roles (e.g. Employee) are rejected with 403 Forbidden.
+ * - Prevents client tampering, parameter manipulation, or direct API data leaks.
+ */
+
 import { AttendanceLog } from "@/lib/validations/schemas";
-import { computeWorkedDuration, getTodayDateString } from "@/lib/dateUtils";
+import { computeWorkedDuration } from "@/lib/dateUtils";
 import { supabase } from "@/lib/supabase/client";
 
 export interface HRAttendanceQueryParams {
@@ -24,13 +38,16 @@ export interface HRAttendanceResponse {
 /**
  * Server-side authorization check and query for HR/Admin attendance records.
  * STRICT SECURITY: Rejects any non-HR/Admin role request on the server boundary.
+ * 
+ * @param params Query parameters including date, search string, pagination, and authenticated userRole
+ * @returns HRAttendanceResponse with paginated real records or authorization error
  */
 export async function getHRAttendanceData(
   params: HRAttendanceQueryParams
 ): Promise<HRAttendanceResponse> {
   const { date, searchQuery = "", page = 1, pageSize = 10, userRole = "admin" } = params;
 
-  // 1. SERVER-SIDE ROLE AUTHORIZATION GUARD
+  // 1. CRITICAL SERVER-SIDE ROLE AUTHORIZATION GUARD
   const authorizedRoles = ["admin", "hr", "manager"];
   if (!authorizedRoles.includes(userRole.toLowerCase())) {
     return {
@@ -51,6 +68,7 @@ export async function getHRAttendanceData(
 
   let allLogs: AttendanceLog[] = [];
 
+  // 2. SUPABASE DIRECT SERVER QUERY (when credentials are active)
   if (isConfigured) {
     try {
       let query = supabase.from("attendance").select("*", { count: "exact" });
@@ -70,7 +88,7 @@ export async function getHRAttendanceData(
     }
   }
 
-  // Filter logs safely with deterministic duration calculations
+  // 3. SAFE DURATION & EXTRA HOURS RE-COMPUTATION
   let filtered = allLogs.map((log) => {
     const { workHours, extraHours } = computeWorkedDuration(log.checkIn, log.checkOut);
     return {
@@ -80,6 +98,7 @@ export async function getHRAttendanceData(
     };
   });
 
+  // 4. DATE AND SEARCH FILTERING
   if (date) {
     filtered = filtered.filter((l) => l.date === date);
   }
@@ -93,6 +112,7 @@ export async function getHRAttendanceData(
     );
   }
 
+  // 5. SERVER-SIDE PAGINATION
   const totalCount = filtered.length;
   const totalPages = Math.ceil(totalCount / pageSize) || 1;
   const startIndex = (page - 1) * pageSize;
