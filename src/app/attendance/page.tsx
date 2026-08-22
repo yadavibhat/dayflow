@@ -120,40 +120,48 @@ export default function AttendancePage() {
                     </tr>
                   </thead>
                   <tbody className="font-body-md text-body-md divide-y divide-border-light">
-                    {filteredAttendance.map((item) => (
-                      <tr
-                        key={item.id}
-                        className="hover:bg-slate-surface transition-colors"
-                      >
-                        <td className="px-6 py-4 flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center text-secondary font-label-md text-label-md font-bold">
-                            {item.employeeName.split(" ").map(n => n[0]).join("")}
-                          </div>
-                          <span className="font-medium text-primary">{item.employeeName}</span>
-                        </td>
-                        <td className="px-6 py-4 text-secondary">{item.checkIn}</td>
-                        <td className="px-6 py-4 text-secondary">{item.checkOut}</td>
-                        <td className="px-6 py-4 text-primary font-medium">{item.workHours}</td>
-                        <td className="px-6 py-4 text-secondary">{item.extraHours}</td>
-                        <td className="px-6 py-4">
-                          {item.status === "Present" && (
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-success-soft text-success-text font-label-sm text-label-sm font-bold">
-                              Present
-                            </span>
-                          )}
-                          {item.status === "Late" && (
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-warning-soft text-warning-text font-label-sm text-label-sm font-bold">
-                              Late
-                            </span>
-                          )}
-                          {item.status === "On Leave" && (
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-surface-container-low text-secondary font-label-sm text-label-sm font-bold">
-                              On Leave
-                            </span>
-                          )}
+                    {filteredAttendance.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="px-6 py-10 text-center text-secondary font-body-md">
+                          No attendance records found.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      filteredAttendance.map((item) => (
+                        <tr
+                          key={item.id}
+                          className="hover:bg-slate-surface transition-colors"
+                        >
+                          <td className="px-6 py-4 flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center text-secondary font-label-md text-label-md font-bold">
+                              {item.employeeName.split(" ").map((n: string) => n[0]).join("")}
+                            </div>
+                            <span className="font-medium text-primary">{item.employeeName}</span>
+                          </td>
+                          <td className="px-6 py-4 text-secondary">{item.checkIn}</td>
+                          <td className="px-6 py-4 text-secondary">{item.checkOut}</td>
+                          <td className="px-6 py-4 text-primary font-medium">{item.workHours}</td>
+                          <td className="px-6 py-4 text-secondary">{item.extraHours}</td>
+                          <td className="px-6 py-4">
+                            {item.status === "Present" && (
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-success-soft text-success-text font-label-sm text-label-sm font-bold">
+                                Present
+                              </span>
+                            )}
+                            {item.status === "Late" && (
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-warning-soft text-warning-text font-label-sm text-label-sm font-bold">
+                                Late
+                              </span>
+                            )}
+                            {item.status === "On Leave" && (
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-surface-container-low text-secondary font-label-sm text-label-sm font-bold">
+                                On Leave
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -258,40 +266,48 @@ export default function AttendancePage() {
                     </tr>
                   </thead>
                   <tbody className="font-body-md text-body-md divide-y divide-border-light">
-                    {myAttendance.map((item) => (
-                      <tr
-                        key={item.id}
-                        className="hover:bg-slate-surface transition-colors"
-                      >
-                        <td className="px-6 py-4 font-semibold text-primary">
-                          {new Date(item.date).toLocaleDateString("en-US", {
-                            weekday: "short",
-                            month: "short",
-                            day: "2-digit",
-                          })}
-                        </td>
-                        <td className="px-6 py-4 text-secondary">{item.checkIn}</td>
-                        <td className="px-6 py-4 text-secondary">{item.checkOut}</td>
-                        <td className="px-6 py-4 text-primary font-medium">{item.workHours}</td>
-                        <td className="px-6 py-4">
-                          {item.status === "Present" && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded bg-success-soft text-success-text font-label-sm text-label-sm font-bold">
-                              Present
-                            </span>
-                          )}
-                          {item.status === "Late" && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded bg-warning-soft text-warning-text font-label-sm text-label-sm font-bold">
-                              Late In
-                            </span>
-                          )}
-                          {item.status === "On Leave" && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded bg-surface-container-low text-secondary font-label-sm text-label-sm font-bold">
-                              Approved Leave
-                            </span>
-                          )}
+                    {myAttendance.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-10 text-center text-secondary font-body-md">
+                          No personal attendance logs found.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      myAttendance.map((item) => (
+                        <tr
+                          key={item.id}
+                          className="hover:bg-slate-surface transition-colors"
+                        >
+                          <td className="px-6 py-4 font-semibold text-primary">
+                            {new Date(item.date).toLocaleDateString("en-US", {
+                              weekday: "short",
+                              month: "short",
+                              day: "2-digit",
+                            })}
+                          </td>
+                          <td className="px-6 py-4 text-secondary">{item.checkIn}</td>
+                          <td className="px-6 py-4 text-secondary">{item.checkOut}</td>
+                          <td className="px-6 py-4 text-primary font-medium">{item.workHours}</td>
+                          <td className="px-6 py-4">
+                            {item.status === "Present" && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded bg-success-soft text-success-text font-label-sm text-label-sm font-bold">
+                                Present
+                              </span>
+                            )}
+                            {item.status === "Late" && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded bg-warning-soft text-warning-text font-label-sm text-label-sm font-bold">
+                                Late In
+                              </span>
+                            )}
+                            {item.status === "On Leave" && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded bg-surface-container-low text-secondary font-label-sm text-label-sm font-bold">
+                                Approved Leave
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
