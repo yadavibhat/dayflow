@@ -85,16 +85,27 @@ export default function HRAttendancePage() {
 
   // Export CSV
   const handleExportCSV = () => {
-    const headers = ["Employee ID", "Employee Name", "Date", "Check In", "Check Out", "Work Hours", "Extra Hours", "Status"];
+    const headers = [
+      "Employee ID",
+      "Employee Name",
+      "Department",
+      "Date",
+      "Check In Time",
+      "Check Out Time",
+      "Total Worked Hours",
+      "Extra Overtime Hours",
+      "Status",
+    ];
     const rows = filteredData.map((row) => [
-      row.employeeId,
-      row.employeeName,
-      row.date,
-      row.checkIn,
-      row.checkOut,
-      row.workHours,
-      row.extraHours,
-      row.status,
+      `"${row.employeeId}"`,
+      `"${row.employeeName}"`,
+      `"${(row as any).department || "General"}"`,
+      `"${row.date}"`,
+      `"${row.checkIn && row.checkIn !== "--:--" ? row.checkIn : "Not Checked In"}"`,
+      `"${row.checkOut && row.checkOut !== "--:--" ? row.checkOut : "Not Checked Out"}"`,
+      `"${row.workHours && row.workHours !== "--" ? row.workHours : "0h 0m"}"`,
+      `"${row.extraHours && row.extraHours !== "--" ? row.extraHours : "0h 0m"}"`,
+      `"${row.status}"`,
     ]);
 
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");

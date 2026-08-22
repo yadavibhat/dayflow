@@ -24,9 +24,15 @@ export default function SignUpPage() {
       return;
     }
     setLoading(true);
+    // Store registered user session and navigate directly to dashboard home page
+    if (typeof window !== "undefined") {
+      localStorage.setItem("dayflow_authenticated", "true");
+      if (adminName) localStorage.setItem("dayflow_admin_name", adminName);
+      if (companyName) localStorage.setItem("dayflow_company_name", companyName);
+    }
     setTimeout(() => {
-      router.push("/signin");
-    }, 1000);
+      router.push("/dashboard");
+    }, 600);
   };
 
   return (
