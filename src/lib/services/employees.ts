@@ -5,9 +5,10 @@ import {
   Employee, 
   DbEmployee, 
   mapDbToEmployee, 
-  mapEmployeeToDb, 
-  employeeUpdateSchema 
+  mapEmployeeToDb
 } from "@/lib/types/employee";
+import { revalidatePath } from "next/cache";
+import { EmployeeSelfEditSchema, EmployeeSchema } from "@/lib/validations/employee";
 
 /**
  * Fetches the currently authenticated profile from Supabase Auth & profiles table.
@@ -108,24 +109,15 @@ export async function updateEmployeeProfile(employeeId: string, updates: Partial
       return { success: false, error: "Access Denied: You can only edit your own details" };
     }
 
-    // Validate the input using Zod
-    const validatedFields = employeeUpdateSchema.safeParse(updates);
+    // Validate the input using Zod based on role permissions
+    const schema = profile.role === "employee" ? EmployeeSelfEditSchema : EmployeeSchema;
+    const validatedFields = schema.safeParse(updates);
     if (!validatedFields.success) {
-      const errorMsg = validatedFields.error.issues.map(issue => issue.message).join(", ");
+      const errorMsg = validatedFields.error.issues.map(issue => `${issue.path.join(".")}: ${issue.message}`).join(", ");
       return { success: false, error: `Validation Error: ${errorMsg}` };
     }
 
     const filteredUpdates: Partial<Employee> = validatedFields.data as any;
-
-    // Enforce field-level write permissions:
-    // Normal employees are NEVER allowed to edit core administrative or payroll fields.
-    // Ensure we delete any accidental edits of: role (designation), department, employeeCode, or salary structure
-    if (profile.role === "employee") {
-      delete filteredUpdates.role;
-      delete filteredUpdates.department;
-      delete filteredUpdates.employeeCode;
-      delete (filteredUpdates as any).salary;
-    }
 
     const dbUpdates = mapEmployeeToDb(filteredUpdates);
     
@@ -151,6 +143,9 @@ export async function updateEmployeeProfile(employeeId: string, updates: Partial
       before_json: targetEmp,
       after_json: { ...targetEmp, ...dbUpdates }
     });
+
+    revalidatePath("/profile");
+    revalidatePath("/employees");
 
     return { success: true, error: null };
   } catch (err: any) {
