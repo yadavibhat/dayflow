@@ -89,8 +89,8 @@ export default async function MyProfilePage() {
                     src={employee.avatar}
                   />
                 ) : (
-                  <div className="w-full h-full bg-surface-container-high flex items-center justify-center text-secondary text-4xl font-bold font-sans">
-                    {employee.name.split(" ").map(n => n[0]).join("")}
+                  <div className="w-full h-full bg-surface-container-high flex items-center justify-center text-secondary text-4xl font-bold font-sans animate-fade-in">
+                    {employee.name.split(" ").map((n: string) => n[0]).join("")}
                   </div>
                 )}
               </div>
