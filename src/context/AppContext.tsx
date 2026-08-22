@@ -3,6 +3,11 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
 import {
+  serverCheckIn as srvCheckIn,
+  serverCheckOut as srvCheckOut,
+  serverUpdateLeaveStatus as srvUpdateLeave,
+} from "@/lib/services/dashboard";
+import {
   employeeSchema,
   leaveRequestSchema,
   salaryProfileSchema,
@@ -229,6 +234,9 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
     setEmployees(updatedEmployees);
     saveState("dayflow_employees", updatedEmployees);
 
+    // Trigger server-side revalidation (non-blocking)
+    srvCheckIn(employeeId, emp.name).catch(() => null);
+
     addAuditLog(`checked in at ${checkInTime}`, emp.name);
   };
 
@@ -306,6 +314,10 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
     );
     setEmployees(updatedEmployees);
     saveState("dayflow_employees", updatedEmployees);
+
+    // Trigger server-side revalidation (non-blocking)
+    const empName = employees.find((e) => e.id === employeeId)?.name ?? employeeId;
+    srvCheckOut(employeeId, empName).catch(() => null);
 
     addAuditLog(`checked out at ${checkOutTime} (${totalHoursStr} worked)`, record.employeeName);
   };
@@ -407,6 +419,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
     const leave = leaves.find((l) => l.id === leaveId);
     if (leave) {
       addAuditLog(`${status.toLowerCase()} leave request for ${leave.employeeName}`, "HR Admin");
+      // Trigger server-side revalidation (non-blocking)
+      srvUpdateLeave(leaveId, status, "HR Admin").catch(() => null);
 
       if (status === "Approved") {
         const todayStr = new Date().toISOString().split("T")[0];
