@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase/client";
 import { executeCheckIn, executeCheckOut } from "@/services/attendanceService";
+import { serverUpdateLeaveStatus as srvUpdateLeave } from "@/lib/services/dashboard";
 import {
   employeeSchema,
   leaveRequestSchema,
@@ -356,6 +357,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
     const leave = leaves.find((l) => l.id === leaveId);
     if (leave) {
       addAuditLog(`${status.toLowerCase()} leave request for ${leave.employeeName}`, "HR Admin");
+      // Trigger server-side cache revalidation (non-blocking)
+      srvUpdateLeave(leaveId, status, "HR Admin").catch(() => null);
     }
   };
 
