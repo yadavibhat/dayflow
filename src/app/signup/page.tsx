@@ -29,9 +29,10 @@ export default function SignUpPage() {
       localStorage.setItem("dayflow_authenticated", "true");
       if (adminName) localStorage.setItem("dayflow_admin_name", adminName);
       if (companyName) localStorage.setItem("dayflow_company_name", companyName);
+      document.cookie = "dayflow_session=active; path=/; max-age=86400; SameSite=Lax";
     }
     setTimeout(() => {
-      router.push("/dashboard");
+      router.push("/employees");
     }, 600);
   };
 
