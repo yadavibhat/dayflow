@@ -74,6 +74,7 @@ export interface Employee {
   routingNo: string;
   panTaxId: string;
   uan: string;
+  managerId: string;
   salary: {
     base: number;
     basicPct: number;
@@ -132,6 +133,7 @@ export function mapDbToEmployee(dbRow: DbEmployee): Employee {
     routingNo: dbRow.routing_no || "",
     panTaxId: dbRow.pan_tax_id || "",
     uan: dbRow.uan || "",
+    managerId: dbRow.manager_id || "",
     salary: {
       base: salaryConfig.base,
       basicPct: salaryConfig.basicPct,
@@ -166,6 +168,7 @@ export function mapEmployeeToDb(emp: Partial<Employee>): Partial<DbEmployee> {
   if (emp.routingNo !== undefined) dbRow.routing_no = emp.routingNo;
   if (emp.panTaxId !== undefined) dbRow.pan_tax_id = emp.panTaxId;
   if (emp.uan !== undefined) dbRow.uan = emp.uan;
+  if (emp.managerId !== undefined) dbRow.manager_id = emp.managerId;
   if (emp.salary !== undefined) {
     dbRow.salary_structure = {
       base: emp.salary.base,

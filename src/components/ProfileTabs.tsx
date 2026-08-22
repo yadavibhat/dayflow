@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Employee, calculateSalaryComponents } from "@/lib/types/employee";
 import { updateEmployeeProfile } from "@/lib/services/employees";
+import { EmployeeSelfEditSchema, EmployeeSchema } from "@/lib/validations/employee";
 
 interface ProfileTabsProps {
   employee: Employee;
@@ -11,6 +13,7 @@ interface ProfileTabsProps {
 }
 
 export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<"resume" | "private" | "salary" | "security">(
     "private"
   );
@@ -29,6 +32,11 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
     routingNo: employee.routingNo,
     panTaxId: employee.panTaxId,
     uan: employee.uan,
+    // Job fields for HR edit
+    managerId: employee.managerId || "",
+    department: employee.department || "Design",
+    role: employee.role,
+    doj: employee.doj,
   });
 
   const [salaryData, setSalaryData] = useState({
@@ -43,6 +51,7 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Security passwords state
   const [securityData, setSecurityData] = useState({
@@ -68,7 +77,7 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
 
   const isSalaryValid = sumOfComponents <= salaryData.base;
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
@@ -85,16 +94,32 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
 
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
+    setFormErrors({});
     setErrorMsg(null);
     setSuccessMsg(null);
 
+    // Client-side role-based schema validation
+    const schema = role === "employee" ? EmployeeSelfEditSchema : EmployeeSchema;
+    const validated = schema.safeParse(formData);
+
+    if (!validated.success) {
+      const errors: Record<string, string> = {};
+      validated.error.issues.forEach(issue => {
+        errors[issue.path.join(".")] = issue.message;
+      });
+      setFormErrors(errors);
+      setErrorMsg("Please resolve the validation errors on the form.");
+      return;
+    }
+
+    setSaving(true);
     const result = await updateEmployeeProfile(employee.id, formData);
     setSaving(false);
 
     if (result.success) {
       setSuccessMsg("Profile updated successfully!");
       setIsEditing(false);
+      router.refresh(); // Triggers server component revalidation
     } else {
       setErrorMsg(result.error || "Failed to update profile");
     }
@@ -118,21 +143,28 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
 
     if (result.success) {
       setSuccessMsg("Salary structure updated successfully!");
+      router.refresh();
     } else {
       setErrorMsg(result.error || "Failed to update salary details");
     }
   };
 
+  // Permission checks
+  const isEmployee = role === "employee";
+  const canEditPersonal = isEditing; // email, phone, address, photo/avatar
+  const canEditJob = isEditing && !isEmployee; // designation, department, manager, joining date
+  const canEditHRFields = isEditing && !isEmployee; // Name, DOB, Nationality, Marital status, Bank details, PAN, UAN
+
   return (
     <div className="w-full">
       {/* Messages */}
       {successMsg && (
-        <div className="mb-space-md p-space-md bg-success-soft border border-success-text/20 text-success-text rounded-lg font-body-md">
+        <div className="mb-space-md p-space-md bg-success-soft border border-success-text/20 text-success-text rounded-lg font-body-md shadow-sm">
           {successMsg}
         </div>
       )}
       {errorMsg && (
-        <div className="mb-space-md p-space-md bg-danger-soft border border-danger-text/20 text-danger-text rounded-lg font-body-md">
+        <div className="mb-space-md p-space-md bg-danger-soft border border-danger-text/20 text-danger-text rounded-lg font-body-md shadow-sm">
           {errorMsg}
         </div>
       )}
@@ -226,7 +258,10 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
                   {!isEditing && (
                     <button
                       type="button"
-                      onClick={() => setIsEditing(true)}
+                      onClick={() => {
+                        setFormErrors({});
+                        setIsEditing(true);
+                      }}
                       className="text-primary hover:text-ink font-label-sm text-label-sm font-bold flex items-center gap-1 cursor-pointer"
                     >
                       <span className="material-symbols-outlined text-[16px]">edit</span>
@@ -236,134 +271,177 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-y-space-lg gap-x-space-xl">
+                  {/* Name (HR Edit Only) */}
                   <div>
                     <label className="font-label-sm text-label-sm text-secondary block mb-1 font-bold">
                       Full Name
                     </label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        className="w-full bg-surface-container-lowest border border-border-light rounded px-3 py-2 font-body-md text-ink focus:border-ink"
-                        required
-                      />
+                    {canEditHRFields ? (
+                      <div>
+                        <input
+                          type="text"
+                          name="name"
+                          value={formData.name}
+                          onChange={handleInputChange}
+                          className={`w-full bg-surface-container-lowest border rounded px-3 py-2 font-body-md text-ink focus:border-ink ${
+                            formErrors.name ? "border-danger-text" : "border-border-light"
+                          }`}
+                          required
+                        />
+                        {formErrors.name && <p className="text-danger-text text-xs mt-1">{formErrors.name}</p>}
+                      </div>
                     ) : (
-                      <p className="font-body-lg text-body-lg text-on-surface font-medium">
+                      <p className="font-body-lg text-body-lg text-on-surface font-medium py-1">
                         {employee.name || "Not provided"}
                       </p>
                     )}
                   </div>
 
+                  {/* DOB (HR Edit Only) */}
                   <div>
                     <label className="font-label-sm text-label-sm text-secondary block mb-1 font-bold">
                       Date of Birth
                     </label>
-                    {isEditing ? (
-                      <input
-                        type="date"
-                        name="dob"
-                        value={formData.dob || ""}
-                        onChange={handleInputChange}
-                        className="w-full bg-surface-container-lowest border border-border-light rounded px-3 py-2 font-body-md text-ink focus:border-ink"
-                      />
+                    {canEditHRFields ? (
+                      <div>
+                        <input
+                          type="text"
+                          name="dob"
+                          placeholder="e.g. October 14, 1990"
+                          value={formData.dob || ""}
+                          onChange={handleInputChange}
+                          className={`w-full bg-surface-container-lowest border rounded px-3 py-2 font-body-md text-ink focus:border-ink ${
+                            formErrors.dob ? "border-danger-text" : "border-border-light"
+                          }`}
+                        />
+                        {formErrors.dob && <p className="text-danger-text text-xs mt-1">{formErrors.dob}</p>}
+                      </div>
                     ) : (
-                      <p className="font-body-lg text-body-lg text-on-surface font-medium">
+                      <p className="font-body-lg text-body-lg text-on-surface font-medium py-1">
                         {employee.dob || "Not provided"}
                       </p>
                     )}
                   </div>
 
+                  {/* Nationality (HR Edit Only) */}
                   <div>
                     <label className="font-label-sm text-label-sm text-secondary block mb-1 font-bold">
                       Nationality
                     </label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        name="nationality"
-                        value={formData.nationality || ""}
-                        onChange={handleInputChange}
-                        className="w-full bg-surface-container-lowest border border-border-light rounded px-3 py-2 font-body-md text-ink focus:border-ink"
-                      />
+                    {canEditHRFields ? (
+                      <div>
+                        <input
+                          type="text"
+                          name="nationality"
+                          value={formData.nationality || ""}
+                          onChange={handleInputChange}
+                          className={`w-full bg-surface-container-lowest border rounded px-3 py-2 font-body-md text-ink focus:border-ink ${
+                            formErrors.nationality ? "border-danger-text" : "border-border-light"
+                          }`}
+                        />
+                        {formErrors.nationality && <p className="text-danger-text text-xs mt-1">{formErrors.nationality}</p>}
+                      </div>
                     ) : (
-                      <p className="font-body-lg text-body-lg text-on-surface font-medium">
+                      <p className="font-body-lg text-body-lg text-on-surface font-medium py-1">
                         {employee.nationality || "Not provided"}
                       </p>
                     )}
                   </div>
 
+                  {/* Marital Status (HR Edit Only) */}
                   <div>
                     <label className="font-label-sm text-label-sm text-secondary block mb-1 font-bold">
                       Marital Status
                     </label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        name="maritalStatus"
-                        value={formData.maritalStatus || ""}
-                        onChange={handleInputChange}
-                        className="w-full bg-surface-container-lowest border border-border-light rounded px-3 py-2 font-body-md text-ink focus:border-ink"
-                      />
+                    {canEditHRFields ? (
+                      <div>
+                        <input
+                          type="text"
+                          name="maritalStatus"
+                          value={formData.maritalStatus || ""}
+                          onChange={handleInputChange}
+                          className={`w-full bg-surface-container-lowest border rounded px-3 py-2 font-body-md text-ink focus:border-ink ${
+                            formErrors.maritalStatus ? "border-danger-text" : "border-border-light"
+                          }`}
+                        />
+                        {formErrors.maritalStatus && <p className="text-danger-text text-xs mt-1">{formErrors.maritalStatus}</p>}
+                      </div>
                     ) : (
-                      <p className="font-body-lg text-body-lg text-on-surface font-medium">
+                      <p className="font-body-lg text-body-lg text-on-surface font-medium py-1">
                         {employee.maritalStatus || "Not provided"}
                       </p>
                     )}
                   </div>
 
+                  {/* Personal Email (Editable by Anyone) */}
                   <div>
                     <label className="font-label-sm text-label-sm text-secondary block mb-1 font-bold">
                       Personal Email
                     </label>
-                    {isEditing ? (
-                      <input
-                        type="email"
-                        name="email"
-                        value={formData.email || ""}
-                        onChange={handleInputChange}
-                        className="w-full bg-surface-container-lowest border border-border-light rounded px-3 py-2 font-body-md text-ink focus:border-ink"
-                      />
+                    {canEditPersonal ? (
+                      <div>
+                        <input
+                          type="email"
+                          name="email"
+                          value={formData.email || ""}
+                          onChange={handleInputChange}
+                          className={`w-full bg-surface-container-lowest border rounded px-3 py-2 font-body-md text-ink focus:border-ink ${
+                            formErrors.email ? "border-danger-text" : "border-border-light"
+                          }`}
+                        />
+                        {formErrors.email && <p className="text-danger-text text-xs mt-1">{formErrors.email}</p>}
+                      </div>
                     ) : (
-                      <p className="font-body-lg text-body-lg text-on-surface font-medium">
+                      <p className="font-body-lg text-body-lg text-on-surface font-medium py-1">
                         {employee.email || "Not provided"}
                       </p>
                     )}
                   </div>
 
+                  {/* Phone Number (Editable by Anyone) */}
                   <div>
                     <label className="font-label-sm text-label-sm text-secondary block mb-1 font-bold">
                       Phone Number
                     </label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        name="phone"
-                        value={formData.phone || ""}
-                        onChange={handleInputChange}
-                        className="w-full bg-surface-container-lowest border border-border-light rounded px-3 py-2 font-body-md text-ink focus:border-ink"
-                      />
+                    {canEditPersonal ? (
+                      <div>
+                        <input
+                          type="text"
+                          name="phone"
+                          value={formData.phone || ""}
+                          onChange={handleInputChange}
+                          className={`w-full bg-surface-container-lowest border rounded px-3 py-2 font-body-md text-ink focus:border-ink ${
+                            formErrors.phone ? "border-danger-text" : "border-border-light"
+                          }`}
+                        />
+                        {formErrors.phone && <p className="text-danger-text text-xs mt-1">{formErrors.phone}</p>}
+                      </div>
                     ) : (
-                      <p className="font-body-lg text-body-lg text-on-surface font-medium">
+                      <p className="font-body-lg text-body-lg text-on-surface font-medium py-1">
                         {employee.phone || "Not provided"}
                       </p>
                     )}
                   </div>
 
+                  {/* Permanent Address (Editable by Anyone) */}
                   <div className="md:col-span-2">
                     <label className="font-label-sm text-label-sm text-secondary block mb-1 font-bold">
                       Permanent Address
                     </label>
-                    {isEditing ? (
-                      <textarea
-                        name="address"
-                        value={formData.address || ""}
-                        onChange={handleInputChange}
-                        className="w-full bg-surface-container-lowest border border-border-light rounded px-3 py-2 font-body-md text-ink focus:border-ink min-h-[80px]"
-                      />
+                    {canEditPersonal ? (
+                      <div>
+                        <textarea
+                          name="address"
+                          value={formData.address || ""}
+                          onChange={handleInputChange}
+                          className={`w-full bg-surface-container-lowest border rounded px-3 py-2 font-body-md text-ink focus:border-ink min-h-[80px] ${
+                            formErrors.address ? "border-danger-text" : "border-border-light"
+                          }`}
+                        />
+                        {formErrors.address && <p className="text-danger-text text-xs mt-1">{formErrors.address}</p>}
+                      </div>
                     ) : (
-                      <p className="font-body-lg text-body-lg text-on-surface leading-relaxed font-medium">
+                      <p className="font-body-lg text-body-lg text-on-surface leading-relaxed font-medium py-1">
                         {employee.address || "Not provided"}
                       </p>
                     )}
@@ -380,43 +458,126 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
                   </h2>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-y-space-lg gap-x-space-xl">
+                  {/* Date of Joining (HR Edit Only) */}
                   <div>
                     <label className="font-label-sm text-label-sm text-secondary block mb-1 font-bold">
                       Date of Joining (DOJ)
                     </label>
-                    <p className="font-body-lg text-body-lg text-on-surface font-medium">
-                      {employee.doj || "Not provided"}
-                    </p>
+                    {canEditJob ? (
+                      <div>
+                        <input
+                          type="text"
+                          name="doj"
+                          placeholder="e.g. March 01, 2021"
+                          value={formData.doj}
+                          onChange={handleInputChange}
+                          className={`w-full bg-surface-container-lowest border rounded px-3 py-2 font-body-md text-ink focus:border-ink ${
+                            formErrors.doj ? "border-danger-text" : "border-border-light"
+                          }`}
+                        />
+                        {formErrors.doj && <p className="text-danger-text text-xs mt-1">{formErrors.doj}</p>}
+                      </div>
+                    ) : (
+                      <p className="font-body-lg text-body-lg text-on-surface font-medium py-1">
+                        {employee.doj || "Not provided"}
+                      </p>
+                    )}
                   </div>
+
+                  {/* Employee Code / Login ID (ALWAYS READ-ONLY FOR EVERYONE) */}
                   <div>
-                    <label className="font-label-sm text-label-sm text-secondary block mb-1 font-bold">
-                      Employee Code / Login ID
+                    <label className="font-label-sm text-label-sm text-secondary block mb-1 font-bold text-secondary/60">
+                      Employee Code / Login ID (Read-only)
                     </label>
-                    <p className="font-body-lg text-body-lg text-on-surface font-semibold">
+                    <p className="font-body-lg text-body-lg text-secondary/70 font-semibold bg-surface-container-low px-3 py-2 rounded border border-border-light">
                       {employee.employeeCode || "Not provided"}
                     </p>
                   </div>
+
+                  {/* Designation (HR Edit Only) */}
                   <div>
                     <label className="font-label-sm text-label-sm text-secondary block mb-1 font-bold">
                       Designation
                     </label>
-                    <p className="font-body-lg text-body-lg text-on-surface font-medium">
-                      {employee.role || "Not provided"}
-                    </p>
+                    {canEditJob ? (
+                      <div>
+                        <input
+                          type="text"
+                          name="role"
+                          value={formData.role}
+                          onChange={handleInputChange}
+                          className={`w-full bg-surface-container-lowest border rounded px-3 py-2 font-body-md text-ink focus:border-ink ${
+                            formErrors.role ? "border-danger-text" : "border-border-light"
+                          }`}
+                        />
+                        {formErrors.role && <p className="text-danger-text text-xs mt-1">{formErrors.role}</p>}
+                      </div>
+                    ) : (
+                      <p className="font-body-lg text-body-lg text-on-surface font-medium py-1">
+                        {employee.role || "Not provided"}
+                      </p>
+                    )}
                   </div>
+
+                  {/* Department (HR Edit Only) */}
                   <div>
                     <label className="font-label-sm text-label-sm text-secondary block mb-1 font-bold">
                       Department
                     </label>
-                    <p className="font-body-lg text-body-lg text-on-surface font-medium">
-                      {employee.department || "Not provided"}
-                    </p>
+                    {canEditJob ? (
+                      <div>
+                        <select
+                          name="department"
+                          value={formData.department}
+                          onChange={handleInputChange}
+                          className={`w-full bg-surface-container-lowest border rounded px-3 py-2 font-body-md text-ink focus:border-ink ${
+                            formErrors.department ? "border-danger-text" : "border-border-light"
+                          }`}
+                        >
+                          <option value="Design">Design</option>
+                          <option value="Engineering">Engineering</option>
+                          <option value="Marketing">Marketing</option>
+                          <option value="Finance">Finance</option>
+                          <option value="HR">HR</option>
+                        </select>
+                        {formErrors.department && <p className="text-danger-text text-xs mt-1">{formErrors.department}</p>}
+                      </div>
+                    ) : (
+                      <p className="font-body-lg text-body-lg text-on-surface font-medium py-1">
+                        {employee.department || "Not provided"}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Manager ID (HR Edit Only) */}
+                  <div>
+                    <label className="font-label-sm text-label-sm text-secondary block mb-1 font-bold">
+                      Manager ID
+                    </label>
+                    {canEditJob ? (
+                      <div>
+                        <input
+                          type="text"
+                          name="managerId"
+                          value={formData.managerId}
+                          onChange={handleInputChange}
+                          className={`w-full bg-surface-container-lowest border rounded px-3 py-2 font-body-md text-ink focus:border-ink ${
+                            formErrors.managerId ? "border-danger-text" : "border-border-light"
+                          }`}
+                        />
+                        {formErrors.managerId && <p className="text-danger-text text-xs mt-1">{formErrors.managerId}</p>}
+                      </div>
+                    ) : (
+                      <p className="font-body-lg text-body-lg text-on-surface font-medium py-1">
+                        {employee.managerId || "Not provided"}
+                      </p>
+                    )}
                   </div>
                 </div>
               </section>
             </div>
 
-            {/* Right Column (Financial & Statutory) */}
+            {/* Right Column (Financial & Statutory - HR Edit Only) */}
             <div className="flex flex-col gap-space-lg">
               <section className="bg-surface-container-lowest border border-border-light rounded-xl p-space-lg md:p-space-xl h-full shadow-sm">
                 <div className="flex items-center gap-2 mb-space-lg border-b border-border-light pb-space-sm">
@@ -428,58 +589,76 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
                   </h2>
                 </div>
                 <div className="flex flex-col gap-space-lg">
+                  {/* Bank Name */}
                   <div>
                     <label className="font-label-sm text-label-sm text-secondary block mb-1 font-bold">
                       Bank Name
                     </label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        name="bankName"
-                        value={formData.bankName || ""}
-                        onChange={handleInputChange}
-                        className="w-full bg-surface-container-lowest border border-border-light rounded px-3 py-2 font-body-md text-ink focus:border-ink"
-                      />
+                    {canEditHRFields ? (
+                      <div>
+                        <input
+                          type="text"
+                          name="bankName"
+                          value={formData.bankName || ""}
+                          onChange={handleInputChange}
+                          className={`w-full bg-surface-container-lowest border rounded px-3 py-2 font-body-md text-ink focus:border-ink ${
+                            formErrors.bankName ? "border-danger-text" : "border-border-light"
+                          }`}
+                        />
+                        {formErrors.bankName && <p className="text-danger-text text-xs mt-1">{formErrors.bankName}</p>}
+                      </div>
                     ) : (
-                      <p className="font-body-lg text-body-lg text-on-surface font-medium">
+                      <p className="font-body-lg text-body-lg text-on-surface font-medium py-1">
                         {employee.bankName || "Not provided"}
                       </p>
                     )}
                   </div>
                   
+                  {/* Account Number */}
                   <div>
                     <label className="font-label-sm text-label-sm text-secondary block mb-1 font-bold">
                       Account Number
                     </label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        name="accountNo"
-                        value={formData.accountNo || ""}
-                        onChange={handleInputChange}
-                        className="w-full bg-surface-container-lowest border border-border-light rounded px-3 py-2 font-body-md text-ink focus:border-ink"
-                      />
+                    {canEditHRFields ? (
+                      <div>
+                        <input
+                          type="text"
+                          name="accountNo"
+                          value={formData.accountNo || ""}
+                          onChange={handleInputChange}
+                          className={`w-full bg-surface-container-lowest border rounded px-3 py-2 font-body-md text-ink focus:border-ink ${
+                            formErrors.accountNo ? "border-danger-text" : "border-border-light"
+                          }`}
+                        />
+                        {formErrors.accountNo && <p className="text-danger-text text-xs mt-1">{formErrors.accountNo}</p>}
+                      </div>
                     ) : (
-                      <p className="font-body-lg text-body-lg text-on-surface font-mono tracking-tight font-medium">
+                      <p className="font-body-lg text-body-lg text-on-surface font-mono tracking-tight font-medium py-1">
                         {employee.accountNo || "Not provided"}
                       </p>
                     )}
                   </div>
 
+                  {/* Routing / IFSC */}
                   <div>
                     <label className="font-label-sm text-label-sm text-secondary block mb-1 font-bold">
                       Routing / IFSC
                     </label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        name="routingNo"
-                        value={formData.routingNo || ""}
-                        onChange={handleInputChange}
-                        className="w-full bg-surface-container-lowest border border-border-light rounded px-3 py-2 font-body-md text-ink focus:border-ink"
-                      />
+                    {canEditHRFields ? (
+                      <div>
+                        <input
+                          type="text"
+                          name="routingNo"
+                          value={formData.routingNo || ""}
+                          onChange={handleInputChange}
+                          className={`w-full bg-surface-container-lowest border rounded px-3 py-2 font-body-md text-ink focus:border-ink ${
+                            formErrors.routingNo ? "border-danger-text" : "border-border-light"
+                          }`}
+                        />
+                        {formErrors.routingNo && <p className="text-danger-text text-xs mt-1">{formErrors.routingNo}</p>}
+                      </div>
                     ) : (
-                      <p className="font-body-lg text-body-lg text-on-surface font-mono tracking-tight font-medium">
+                      <p className="font-body-lg text-body-lg text-on-surface font-mono tracking-tight font-medium py-1">
                         {employee.routingNo || "Not provided"}
                       </p>
                     )}
@@ -487,39 +666,51 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
 
                   <div className="my-space-sm border-t border-border-light border-dashed"></div>
 
+                  {/* PAN / Tax ID */}
                   <div>
                     <label className="font-label-sm text-label-sm text-secondary block mb-1 font-bold">
                       PAN / Tax ID
                     </label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        name="panTaxId"
-                        value={formData.panTaxId || ""}
-                        onChange={handleInputChange}
-                        className="w-full bg-surface-container-lowest border border-border-light rounded px-3 py-2 font-body-md text-ink focus:border-ink"
-                      />
+                    {canEditHRFields ? (
+                      <div>
+                        <input
+                          type="text"
+                          name="panTaxId"
+                          value={formData.panTaxId || ""}
+                          onChange={handleInputChange}
+                          className={`w-full bg-surface-container-lowest border rounded px-3 py-2 font-body-md text-ink focus:border-ink ${
+                            formErrors.panTaxId ? "border-danger-text" : "border-border-light"
+                          }`}
+                        />
+                        {formErrors.panTaxId && <p className="text-danger-text text-xs mt-1">{formErrors.panTaxId}</p>}
+                      </div>
                     ) : (
-                      <p className="font-body-lg text-body-lg text-on-surface font-mono tracking-tight font-medium">
+                      <p className="font-body-lg text-body-lg text-on-surface font-mono tracking-tight font-medium py-1">
                         {employee.panTaxId || "Not provided"}
                       </p>
                     )}
                   </div>
 
+                  {/* UAN */}
                   <div>
                     <label className="font-label-sm text-label-sm text-secondary block mb-1 font-bold">
                       UAN
                     </label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        name="uan"
-                        value={formData.uan || ""}
-                        onChange={handleInputChange}
-                        className="w-full bg-surface-container-lowest border border-border-light rounded px-3 py-2 font-body-md text-ink focus:border-ink"
-                      />
+                    {canEditHRFields ? (
+                      <div>
+                        <input
+                          type="text"
+                          name="uan"
+                          value={formData.uan || ""}
+                          onChange={handleInputChange}
+                          className={`w-full bg-surface-container-lowest border rounded px-3 py-2 font-body-md text-ink focus:border-ink ${
+                            formErrors.uan ? "border-danger-text" : "border-border-light"
+                          }`}
+                        />
+                        {formErrors.uan && <p className="text-danger-text text-xs mt-1">{formErrors.uan}</p>}
+                      </div>
                     ) : (
-                      <p className="font-body-lg text-body-lg text-on-surface font-mono tracking-tight font-medium">
+                      <p className="font-body-lg text-body-lg text-on-surface font-mono tracking-tight font-medium py-1">
                         {employee.uan || "Not provided"}
                       </p>
                     )}
@@ -531,13 +722,14 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
                     <button
                       type="submit"
                       disabled={saving}
-                      className="bg-ink text-on-primary font-label-md text-label-md px-6 py-2.5 rounded hover:bg-primary transition-colors cursor-pointer font-bold disabled:opacity-50 flex-1"
+                      className="bg-ink text-on-primary font-label-md text-label-md px-6 py-2.5 rounded hover:bg-primary transition-colors cursor-pointer font-bold disabled:opacity-50 flex-1 shadow-sm"
                     >
                       {saving ? "Saving..." : "Save Changes"}
                     </button>
                     <button
                       type="button"
                       onClick={() => {
+                        setFormErrors({});
                         setIsEditing(false);
                         setFormData({
                           name: employee.name,
@@ -552,6 +744,10 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
                           routingNo: employee.routingNo,
                           panTaxId: employee.panTaxId,
                           uan: employee.uan,
+                          managerId: employee.managerId || "",
+                          department: employee.department || "Design",
+                          role: employee.role,
+                          doj: employee.doj,
                         });
                       }}
                       className="border border-border-light text-secondary font-label-md text-label-md px-6 py-2.5 rounded hover:bg-surface-container transition-colors cursor-pointer font-medium"
@@ -565,7 +761,9 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
                       info
                     </span>
                     <p className="font-body-md text-body-md text-secondary leading-snug">
-                      To update administrative fields, contact the HR department.
+                      {isEmployee 
+                        ? "To update administrative, job, or financial details, please submit a request to HR."
+                        : "Salary details can be modified within the Payroll structure module."}
                     </p>
                   </div>
                 )}
@@ -709,7 +907,7 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
 
             {/* Validation warning */}
             {!isSalaryValid && (
-              <div className="p-space-md bg-danger-soft border border-danger-text/20 text-danger-text rounded-lg font-body-sm">
+              <div className="p-space-md bg-danger-soft border border-danger-text/20 text-danger-text rounded-lg font-body-sm animate-pulse">
                 Warning: The sum of Basic, HRA, and Standard Allowance exceeds the base Wage. Fixed allowance will be 0.
               </div>
             )}
@@ -718,7 +916,7 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
               <button
                 type="submit"
                 disabled={saving || !isSalaryValid}
-                className="bg-ink text-on-primary font-label-md text-label-md px-6 py-2.5 rounded hover:bg-primary transition-colors cursor-pointer font-bold disabled:opacity-50"
+                className="bg-ink text-on-primary font-label-md text-label-md px-6 py-2.5 rounded hover:bg-primary transition-colors cursor-pointer font-bold disabled:opacity-50 shadow-sm"
               >
                 {saving ? "Saving..." : "Save Salary Config"}
               </button>
@@ -772,7 +970,7 @@ export function ProfileTabs({ employee, role, showSalary }: ProfileTabsProps) {
             <div className="pt-2">
               <button
                 type="submit"
-                className="bg-ink text-on-primary font-label-md text-label-md px-6 py-2.5 rounded hover:bg-primary transition-colors font-bold cursor-pointer"
+                className="bg-ink text-on-primary font-label-md text-label-md px-6 py-2.5 rounded hover:bg-primary transition-colors font-bold cursor-pointer shadow-sm"
               >
                 Change Password
               </button>
