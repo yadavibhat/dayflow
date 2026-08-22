@@ -21,6 +21,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
     { name: "Employees", href: "/employees", icon: "groups", visible: true },
     { name: "Attendance", href: "/attendance", icon: "clinical_notes", visible: true },
     { name: "Time Off", href: "/timeoff", icon: "event_busy", visible: true },
+    { name: "Payroll", href: currentRole === "admin" ? "/hr/payroll" : "/payroll", icon: "payments", visible: true },
+    { name: "Audit Log", href: "/hr/audit", icon: "manage_search", visible: currentRole === "admin" },
     { name: "Reports", href: "/reports", icon: "assessment", visible: currentRole === "admin" },
     { name: "My Profile", href: "/profile", icon: "person", visible: true },
   ];

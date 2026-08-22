@@ -37,10 +37,22 @@ export const Sidebar: React.FC = () => {
       visible: true,
     },
     {
+      name: "Payroll",
+      href: currentRole === "admin" ? "/hr/payroll" : "/payroll",
+      icon: "payments",
+      visible: true,
+    },
+    {
+      name: "Audit Log",
+      href: "/hr/audit",
+      icon: "manage_search",
+      visible: currentRole === "admin",
+    },
+    {
       name: "Reports",
       href: "/reports",
       icon: "assessment",
-      visible: currentRole === "admin", // Only show reports for admin role
+      visible: currentRole === "admin",
     },
   ];
 
