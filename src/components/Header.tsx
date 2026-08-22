@@ -45,7 +45,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
   ];
 
   return (
-    <header className="bg-surface-container-lowest border-b border-border-light h-16 flex items-center justify-between w-full px-gutter-mobile md:px-gutter-desktop sticky top-0 z-40">
+    <header className="glass-panel border-b border-border-light h-16 flex items-center justify-between w-full px-gutter-mobile md:px-gutter-desktop sticky top-0 z-40 bg-surface-container-lowest/80">
       {/* Brand & Desktop SubNav */}
       <div className="flex items-center gap-space-xl h-full">
         {/* Mobile Hamburger menu */}
@@ -168,7 +168,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
               />
             ) : (
               <div className="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center text-secondary font-bold text-sm border border-border-light">
-                {currentUser.name.split(" ").map(n => n[0]).join("")}
+                {currentUser.name.split(" ").map((n: string) => n[0]).join("")}
               </div>
             )}
           </button>
