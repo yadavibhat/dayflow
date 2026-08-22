@@ -165,4 +165,47 @@ describe("Leave Application & Time Off Domain Suite", () => {
     assert.equal(result.leave?.status, "Pending");
     assert.equal(result.leave?.employeeId, "emp_1");
   });
+
+  // 5. SERVER-SIDE HR/ADMIN LEAVE APPROVAL & REJECTION GUARD
+  it("should reject an Employee role from executing leave approval/rejection", async () => {
+    const { reviewLeaveRequest } = await import("../actions/leaveActions");
+    const result = await reviewLeaveRequest({
+      leaveId: "leave_123",
+      action: "Approved",
+      approverId: "emp_1",
+      approverRole: "employee", // Unauthorized
+    });
+
+    assert.equal(result.success, false);
+    assert.match(result.error || "", /403 Forbidden/);
+  });
+
+  it("should enforce a mandatory comment for leave rejection", async () => {
+    const { reviewLeaveRequest } = await import("../actions/leaveActions");
+    const result = await reviewLeaveRequest({
+      leaveId: "leave_123",
+      action: "Rejected",
+      approverComment: "", // Empty comment
+      approverId: "admin_1",
+      approverRole: "admin",
+    });
+
+    assert.equal(result.success, false);
+    assert.match(result.error || "", /Rejection requires an explanatory comment/);
+  });
+
+  it("should permit Admin to approve leave with metadata", async () => {
+    const { reviewLeaveRequest } = await import("../actions/leaveActions");
+    const result = await reviewLeaveRequest({
+      leaveId: "leave_123",
+      action: "Approved",
+      approverComment: "Approved for Q3 holiday",
+      approverId: "admin_1",
+      approverRole: "admin",
+    });
+
+    assert.equal(result.success, true);
+    assert.equal(result.updatedLeave?.status, "Approved");
+    assert.equal(result.updatedLeave?.approver_id, "admin_1");
+  });
 });
