@@ -9,9 +9,6 @@ import { useCheckInStatus } from "@/hooks/useDashboardStats";
 import { Logo } from "@/components/Logo";
 import { SystrayCheckInOut } from "@/components/attendance/SystrayCheckInOut";
 
-import { Logo } from "@/components/Logo";
-import { SystrayCheckInOut } from "@/components/attendance/SystrayCheckInOut";
-
 interface HeaderProps {
   onToggleMobileMenu?: () => void;
 }
